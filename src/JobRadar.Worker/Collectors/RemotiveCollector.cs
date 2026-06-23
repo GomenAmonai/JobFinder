@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using JobRadar.Application.Ingestion;
 using JobRadar.Worker.Ingestion;
+using Microsoft.Extensions.Options;
 
 namespace JobRadar.Worker.Collectors;
 
@@ -14,7 +15,8 @@ namespace JobRadar.Worker.Collectors;
 /// </summary>
 public sealed class RemotiveCollector(
     IHttpClientFactory httpClientFactory,
-    IVacancyMessageProducer producer,
+    IKafkaPublisher publisher,
+    IOptions<KafkaSettings> options,
     ILogger<RemotiveCollector> logger) : BackgroundService
 {
     private const string Source = "remotive";
@@ -46,6 +48,7 @@ public sealed class RemotiveCollector(
     private async Task CollectOnceAsync(CancellationToken ct)
     {
         var client = httpClientFactory.CreateClient("remotive");
+        var topic = options.Value.RawVacanciesTopic;
         var produced = 0;
 
         foreach (var query in Queries)
@@ -58,7 +61,7 @@ public sealed class RemotiveCollector(
                 if (!IsRelevant(job.Title))
                     continue;
 
-                await producer.ProduceAsync(new RawVacancyMessage
+                await publisher.PublishAsync(topic, $"{Source}:{job.Id}", new RawVacancyMessage
                 {
                     Source = Source,
                     ExternalId = job.Id.ToString(),

@@ -1,6 +1,8 @@
 using JobRadar.Application.Ingestion;
+using JobRadar.Application.Vacancies;
 using JobRadar.Infrastructure.Ingestion;
 using JobRadar.Infrastructure.Persistence;
+using JobRadar.Infrastructure.Vacancies;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -13,6 +15,7 @@ public static class DependencyInjection
     {
         services.AddDbContext<JobRadarDbContext>(options => options.UseNpgsql(connectionString));
         services.AddScoped<IVacancyUpsertService, VacancyUpsertService>();
+        services.AddScoped<IVacancyQueryService, VacancyQueryService>();
         services.TryAddSingleton(TimeProvider.System);
         return services;
     }

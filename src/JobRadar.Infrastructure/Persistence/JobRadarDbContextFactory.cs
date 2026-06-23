@@ -12,7 +12,7 @@ public sealed class JobRadarDbContextFactory : IDesignTimeDbContextFactory<JobRa
     public JobRadarDbContext CreateDbContext(string[] args)
     {
         var connectionString = Environment.GetEnvironmentVariable("JOBRADAR_DB")
-            ?? "Host=localhost;Port=5432;Database=jobradar;Username=jobradar;Password=jobradar";
+            ?? "Host=localhost;Port=5433;Database=jobradar;Username=jobradar;Password=jobradar";
 
         var options = new DbContextOptionsBuilder<JobRadarDbContext>()
             .UseNpgsql(connectionString)

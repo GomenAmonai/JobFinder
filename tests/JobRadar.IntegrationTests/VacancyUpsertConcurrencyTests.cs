@@ -59,7 +59,7 @@ public sealed class VacancyUpsertConcurrencyTests : IAsyncLifetime
             .ToListAsync();
 
         rows.Should().HaveCount(1, "the unique index must collapse all concurrent writers onto one row");
-        results.Count(r => r.Outcome == UpsertOutcome.Inserted)
+        results.Count(outcome => outcome == UpsertOutcome.Inserted)
             .Should().Be(1, "exactly one writer wins the insert; the rest fall through to update");
     }
 }
