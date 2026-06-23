@@ -6,6 +6,8 @@ namespace JobRadar.Infrastructure.Persistence;
 public class JobRadarDbContext(DbContextOptions<JobRadarDbContext> options) : DbContext(options)
 {
     public DbSet<Vacancy> Vacancies => Set<Vacancy>();
+    public DbSet<User> Users => Set<User>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -32,5 +34,17 @@ public class JobRadarDbContext(DbContextOptions<JobRadarDbContext> options) : Db
         v.Property(x => x.Level).HasMaxLength(30);
         v.Property(x => x.Stack).HasMaxLength(50);
         v.Property(x => x.SalaryCurrency).HasMaxLength(10);
+
+        var u = b.Entity<User>();
+        u.HasKey(x => x.Id);
+        u.HasIndex(x => x.Email).IsUnique();
+        u.Property(x => x.Email).HasMaxLength(256);
+        u.Property(x => x.DisplayName).HasMaxLength(100);
+
+        var rt = b.Entity<RefreshToken>();
+        rt.HasKey(x => x.Id);
+        rt.HasIndex(x => x.TokenHash).IsUnique();
+        rt.Property(x => x.TokenHash).HasMaxLength(64); // SHA-256 в hex
+        rt.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
     }
 }
