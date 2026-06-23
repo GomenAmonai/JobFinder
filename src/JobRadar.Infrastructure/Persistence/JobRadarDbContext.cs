@@ -14,8 +14,10 @@ public class JobRadarDbContext(DbContextOptions<JobRadarDbContext> options) : Db
         // Идемпотентность приёма держится на этом уникальном индексе.
         v.HasIndex(x => new { x.Source, x.ExternalId }).IsUnique();
         // Optimistic concurrency через системный столбец Postgres xmin (без отдельной колонки):
-        // EF включает его в WHERE при UPDATE и ловит конкурентное изменение строки
-        // (DbUpdateConcurrencyException). Конвенция Npgsql сама маппит это на столбец xmin.
+        // для отслеживаемых обновлений (SaveChanges) EF включает его в WHERE и ловит
+        // конкурентное изменение строки (DbUpdateConcurrencyException). Путь приёма
+        // использует атомарный ExecuteUpdate и токен не задействует — он для
+        // интерактивных правок (Phase 3). Конвенция Npgsql маппит это на столбец xmin.
         v.Property<uint>("xmin")
             .HasColumnName("xmin")
             .HasColumnType("xid")

@@ -26,7 +26,9 @@ public static class VacancyMapper
             SalaryRaw = m.SalaryRaw,
             Skills = m.Skills,
             Url = m.Url,
-            PublishedAt = m.PublishedAt,
+            // Postgres timestamptz принимает только UTC (offset 0); источники часто
+            // отдают дату с локальным смещением — приводим к UTC на границе нормализации.
+            PublishedAt = m.PublishedAt?.ToUniversalTime(),
         };
     }
 }

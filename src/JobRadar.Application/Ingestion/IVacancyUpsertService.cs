@@ -9,9 +9,7 @@ namespace JobRadar.Application.Ingestion;
 /// </summary>
 public interface IVacancyUpsertService
 {
-    Task<UpsertResult> UpsertAsync(Vacancy incoming, CancellationToken ct = default);
+    Task<UpsertOutcome> UpsertAsync(Vacancy incoming, CancellationToken ct = default);
 }
 
 public enum UpsertOutcome { Inserted, Updated }
-
-public readonly record struct UpsertResult(UpsertOutcome Outcome, int VacancyId);

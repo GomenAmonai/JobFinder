@@ -2,9 +2,11 @@ namespace JobRadar.Domain.Entities;
 
 /// <summary>
 /// Вакансия из внешнего источника. Уникальна по паре (Source, ExternalId):
-/// повторная доставка той же вакансии должна обновлять запись, а не создавать
-/// дубль. Это гарантируется идемпотентным upsert'ом с optimistic concurrency
-/// (системный столбец Postgres xmin) — центральный showpiece проекта.
+/// повторная доставка той же вакансии обновляет запись, а не создаёт дубль.
+/// Идемпотентность держится на уникальном индексе + атомарном upsert
+/// (VacancyUpsertService) — центральный showpiece. Системный столбец xmin
+/// настроен как concurrency-token для интерактивных правок (Phase 3); путь
+/// приёма его не задействует (см. JobRadarDbContext).
 /// </summary>
 public class Vacancy
 {

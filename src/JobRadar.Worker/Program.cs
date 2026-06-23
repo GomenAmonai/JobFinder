@@ -1,5 +1,5 @@
+using JobRadar.Application.Ingestion;
 using JobRadar.Infrastructure;
-using JobRadar.Worker;
 using JobRadar.Worker.Collectors;
 using JobRadar.Worker.Ingestion;
 
@@ -18,8 +18,10 @@ builder.Services.AddHttpClient("remotive", client =>
     })
     .AddStandardResilienceHandler();
 
-builder.Services.AddSingleton<IVacancyMessageProducer, KafkaVacancyProducer>();
+builder.Services.AddSingleton<IKafkaPublisher, KafkaPublisher>();
 
+// Топики создаём первыми, до consumer/collector.
+builder.Services.AddHostedService<KafkaTopicInitializer>();
 builder.Services.AddHostedService<VacancyConsumer>();
 builder.Services.AddHostedService<RemotiveCollector>();
 
