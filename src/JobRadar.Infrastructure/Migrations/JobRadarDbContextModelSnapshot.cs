@@ -22,6 +22,51 @@ namespace JobRadar.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("JobRadar.Domain.Entities.JobApplication", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CoverLetter")
+                        .HasMaxLength(5000)
+                        .HasColumnType("character varying(5000)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("VacancyId")
+                        .HasColumnType("integer");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VacancyId");
+
+                    b.HasIndex("UserId", "VacancyId")
+                        .IsUnique();
+
+                    b.ToTable("Applications");
+                });
+
             modelBuilder.Entity("JobRadar.Domain.Entities.RefreshToken", b =>
                 {
                     b.Property<Guid>("Id")
@@ -170,6 +215,9 @@ namespace JobRadar.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<Guid?>("PostedByUserId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTimeOffset?>("PublishedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -214,10 +262,29 @@ namespace JobRadar.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("PostedByUserId");
+
                     b.HasIndex("Source", "ExternalId")
                         .IsUnique();
 
                     b.ToTable("Vacancies");
+                });
+
+            modelBuilder.Entity("JobRadar.Domain.Entities.JobApplication", b =>
+                {
+                    b.HasOne("JobRadar.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("JobRadar.Domain.Entities.Vacancy", "Vacancy")
+                        .WithMany()
+                        .HasForeignKey("VacancyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Vacancy");
                 });
 
             modelBuilder.Entity("JobRadar.Domain.Entities.RefreshToken", b =>

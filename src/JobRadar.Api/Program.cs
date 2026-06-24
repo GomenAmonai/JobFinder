@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using JobRadar.Api.Hubs;
 using JobRadar.Api.Ingestion;
 using JobRadar.Api;
+using JobRadar.Application.Applications;
 using JobRadar.Application.Auth;
 using JobRadar.Application.Ingestion;
 using JobRadar.Application.SavedFilters;
@@ -28,6 +29,8 @@ builder.Services.AddOpenApi();
 builder.Services.Configure<KafkaSettings>(builder.Configuration.GetSection(KafkaSettings.SectionName));
 builder.Services.AddSignalR()
     .AddJsonProtocol(o => o.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+// Статусы откликов ездят по REST как строки, а не как числа.
+builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddHostedService<VacancyChangedConsumer>();
 
 var jwt = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()
@@ -175,6 +178,59 @@ filters.MapPut("/{id:int}", async (int id, UpdateSavedFilterRequest request, ISa
 });
 
 filters.MapDelete("/{id:int}", async (int id, ISavedFilterService service, ClaimsPrincipal user, CancellationToken ct) =>
+{
+    var userId = user.GetUserId();
+    if (userId is null) return Results.Unauthorized();
+    return await service.DeleteAsync(userId.Value, id, ct) ? Results.NoContent() : Results.NotFound();
+});
+
+app.MapPost("/vacancies/{vacancyId:int}/applications", async (
+    int vacancyId, CreateApplicationRequest request, IApplicationService service, ClaimsPrincipal user, CancellationToken ct) =>
+{
+    var userId = user.GetUserId();
+    if (userId is null) return Results.Unauthorized();
+    if (RequestValidation.ForApplication(request.CoverLetter) is { } problem) return problem;
+    var outcome = await service.ApplyAsync(userId.Value, vacancyId, request, ct);
+    return outcome.Result switch
+    {
+        ApplyResult.Created => Results.Created($"/me/applications/{outcome.Application!.Id}", outcome.Application),
+        ApplyResult.AlreadyApplied => Results.Conflict(new { error = "already_applied" }),
+        _ => Results.NotFound(),
+    };
+}).RequireAuthorization();
+
+var applications = app.MapGroup("/me/applications").RequireAuthorization();
+
+applications.MapGet("/", async (IApplicationService service, ClaimsPrincipal user, CancellationToken ct) =>
+{
+    var userId = user.GetUserId();
+    return userId is null ? Results.Unauthorized() : Results.Ok(await service.ListAsync(userId.Value, ct));
+});
+
+applications.MapGet("/{id:int}", async (int id, IApplicationService service, ClaimsPrincipal user, CancellationToken ct) =>
+{
+    var userId = user.GetUserId();
+    if (userId is null) return Results.Unauthorized();
+    var application = await service.GetAsync(userId.Value, id, ct);
+    return application is null ? Results.NotFound() : Results.Ok(application);
+});
+
+applications.MapPatch("/{id:int}/status", async (
+    int id, UpdateApplicationStatusRequest request, IApplicationService service, ClaimsPrincipal user, CancellationToken ct) =>
+{
+    var userId = user.GetUserId();
+    if (userId is null) return Results.Unauthorized();
+    var outcome = await service.ChangeStatusAsync(userId.Value, id, request, ct);
+    return outcome.Result switch
+    {
+        StatusChangeResult.Changed => Results.Ok(outcome.Application),
+        StatusChangeResult.NotFound => Results.NotFound(),
+        StatusChangeResult.IllegalTransition => Results.UnprocessableEntity(new { error = "illegal_transition" }),
+        _ => Results.Conflict(new { error = "version_conflict" }),
+    };
+});
+
+applications.MapDelete("/{id:int}", async (int id, IApplicationService service, ClaimsPrincipal user, CancellationToken ct) =>
 {
     var userId = user.GetUserId();
     if (userId is null) return Results.Unauthorized();
