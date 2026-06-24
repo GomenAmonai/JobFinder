@@ -68,6 +68,40 @@ public sealed class VacancyQueryServiceTests : IAsyncLifetime
         result.TotalPages.Should().Be(2);
     }
 
+    [Fact]
+    public async Task Collapses_cross_source_duplicates_to_one()
+    {
+        await using (var seed = new JobRadarDbContext(_options))
+        {
+            seed.Vacancies.AddRange(
+                MakeWithKey("r1", "remotive", "Dedup Target Engineer", "acme|dedup target engineer"),
+                MakeWithKey("o1", "remoteok", "Dedup Target Engineer", "acme|dedup target engineer"));
+            await seed.SaveChangesAsync();
+        }
+
+        var result = await Search(new VacancyQuery { Q = "Dedup Target" });
+
+        result.Total.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Dedup_keeps_the_duplicate_that_matches_the_filtered_facet()
+    {
+        await using (var seed = new JobRadarDbContext(_options))
+        {
+            // Первый по Id — без рынка; дубль с тем же ключом несёт Market="Европа".
+            seed.Vacancies.Add(MakeWithKey("first", "remotive", "Faceted Role", "acme|faceted role"));
+            var withMarket = MakeWithKey("second", "remoteok", "Faceted Role", "acme|faceted role");
+            withMarket.Market = "Европа";
+            seed.Vacancies.Add(withMarket);
+            await seed.SaveChangesAsync();
+        }
+
+        var result = await Search(new VacancyQuery { Market = "Европа" });
+
+        result.Items.Should().ContainSingle(v => v.ExternalId == "second");
+    }
+
     private async Task<PagedResult<VacancyDto>> Search(VacancyQuery query)
     {
         await using var db = new JobRadarDbContext(_options);
@@ -88,5 +122,16 @@ public sealed class VacancyQueryServiceTests : IAsyncLifetime
             PublishedAt = published,
             FirstSeen = published,
             LastSeen = published,
+        };
+
+    private static Vacancy MakeWithKey(string id, string source, string title, string dedupKey)
+        => new()
+        {
+            Source = source,
+            ExternalId = id,
+            Title = title,
+            DedupKey = dedupKey,
+            FirstSeen = Day(20),
+            LastSeen = Day(20),
         };
 }

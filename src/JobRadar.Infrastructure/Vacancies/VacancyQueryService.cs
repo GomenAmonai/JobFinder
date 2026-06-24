@@ -38,6 +38,16 @@ public sealed class VacancyQueryService(JobRadarDbContext db) : IVacancyQuerySer
                 || (v.Skills != null && EF.Functions.ILike(v.Skills, term, "\\")));
         }
 
+        // Сворачиваем кросс-источниковые дубли ПОСЛЕ фильтров: канон (минимальный Id =
+        // первый увиденный) выбирается среди строк, уже прошедших фильтр. Так дубль,
+        // совпавший по грани, которой нет у первой строки (напр. Market), не теряется.
+        // Записи без ключа дедупликации проходят как есть.
+        var canonicalIds = filtered
+            .Where(v => v.DedupKey != null)
+            .GroupBy(v => v.DedupKey)
+            .Select(g => g.Min(x => x.Id));
+        filtered = filtered.Where(v => v.DedupKey == null || canonicalIds.Contains(v.Id));
+
         var total = await filtered.CountAsync(ct);
 
         var items = await filtered
@@ -59,6 +69,9 @@ public sealed class VacancyQueryService(JobRadarDbContext db) : IVacancyQuerySer
                 Stack = v.Stack,
                 Location = v.Location,
                 SalaryRaw = v.SalaryRaw,
+                SalaryMin = v.SalaryMin,
+                SalaryMax = v.SalaryMax,
+                SalaryCurrency = v.SalaryCurrency,
                 Skills = v.Skills,
                 Url = v.Url,
                 PublishedAt = v.PublishedAt,

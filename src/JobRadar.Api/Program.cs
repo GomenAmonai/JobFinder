@@ -8,24 +8,35 @@ using JobRadar.Api.Ingestion;
 using JobRadar.Api;
 using JobRadar.Application.Applications;
 using JobRadar.Application.Auth;
+using JobRadar.Application.Employer;
 using JobRadar.Application.Ingestion;
 using JobRadar.Application.SavedFilters;
 using JobRadar.Application.Vacancies;
+using JobRadar.Domain.Entities;
 using JobRadar.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.IdentityModel.Tokens;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 const string SpaCorsPolicy = "spa";
+// Origins из конфигурации (Cors:AllowedOrigins), дефолт — dev-SPA. В проде задать HTTPS-origin.
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?? ["http://localhost:5173"];
 builder.Services.AddCors(options => options.AddPolicy(SpaCorsPolicy, policy => policy
-    .WithOrigins("http://localhost:5173")
+    .WithOrigins(allowedOrigins)
     .AllowAnyHeader()
     .AllowAnyMethod()
-    .AllowCredentials())); // нужно для SignalR
+    .AllowCredentials())); // AllowCredentials нужен для SignalR
 
 builder.Services.AddOpenApi();
+// Необработанные исключения отдаём как ProblemDetails (без стек-трейса наружу).
+builder.Services.AddProblemDetails();
 builder.Services.Configure<KafkaSettings>(builder.Configuration.GetSection(KafkaSettings.SectionName));
 builder.Services.AddSignalR()
     .AddJsonProtocol(o => o.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
@@ -35,6 +46,10 @@ builder.Services.AddHostedService<VacancyChangedConsumer>();
 
 var jwt = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()
     ?? throw new InvalidOperationException("Missing 'Jwt' configuration.");
+// Fail-fast в не-Development: ни дев-плейсхолдер, ни слишком короткий ключ (HS256 требует >=256 бит).
+if (!builder.Environment.IsDevelopment() &&
+    (jwt.SigningKey.Contains("dev-only", StringComparison.OrdinalIgnoreCase) || Encoding.UTF8.GetByteCount(jwt.SigningKey) < 32))
+    throw new InvalidOperationException("Jwt:SigningKey is the dev placeholder or shorter than 32 bytes. Provide a strong key via env/secret store before deploying.");
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSettings.SectionName));
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -75,7 +90,28 @@ builder.Services.AddRateLimiter(options =>
         RateLimitPartition.GetFixedWindowLimiter(
             httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1) }));
+    // Анонимный публичный /vacancies: ограничиваем, чтобы ILIKE-поиск нельзя было заспамить.
+    options.AddPolicy("public", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions { PermitLimit = 120, Window = TimeSpan.FromMinutes(1) }));
 });
+
+// Observability: трейсы (ASP.NET/HttpClient/Npgsql) + метрики. Экспорт по OTLP включаем
+// только если задан endpoint — иначе телеметрия собирается, но никуда не шлётся (без шума в dev/тестах).
+var otlpEndpoint = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"];
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(r => r.AddService("JobRadar.Api"))
+    .WithTracing(t =>
+    {
+        t.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddSource("Npgsql");
+        if (otlpEndpoint is not null) t.AddOtlpExporter();
+    })
+    .WithMetrics(m =>
+    {
+        m.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddRuntimeInstrumentation();
+        if (otlpEndpoint is not null) m.AddOtlpExporter();
+    });
 
 builder.Services.AddInfrastructure(
     builder.Configuration.GetConnectionString("Postgres")
@@ -88,6 +124,22 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
     app.MapScalarApiReference();
 }
+else
+{
+    app.UseExceptionHandler();
+    app.UseHsts();
+    app.UseHttpsRedirection(); // токены не должны ходить по plaintext (за TLS-терминирующим прокси — no-op)
+}
+
+// Базовые security-заголовки на все ответы (defense-in-depth; OWASP API8).
+app.Use(async (context, next) =>
+{
+    var headers = context.Response.Headers;
+    headers["X-Content-Type-Options"] = "nosniff";
+    headers["X-Frame-Options"] = "DENY";
+    headers["Referrer-Policy"] = "no-referrer";
+    await next();
+});
 
 app.UseCors(SpaCorsPolicy);
 app.UseRateLimiter();
@@ -116,6 +168,7 @@ auth.MapPost("/login", async (LoginRequest request, IAuthService service, Cancel
 
 auth.MapPost("/refresh", async (RefreshRequest request, IAuthService service, CancellationToken ct) =>
 {
+    if (string.IsNullOrWhiteSpace(request.RefreshToken)) return Results.Unauthorized();
     var outcome = await service.RefreshAsync(request.RefreshToken, ct);
     return outcome.Succeeded ? Results.Ok(outcome.Tokens) : Results.Unauthorized();
 });
@@ -124,6 +177,7 @@ auth.MapGet("/me", (ClaimsPrincipal user) => Results.Ok(new
 {
     id = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("sub"),
     email = user.FindFirstValue(ClaimTypes.Email) ?? user.FindFirstValue("email"),
+    role = user.FindFirstValue(ClaimTypes.Role),
 })).RequireAuthorization();
 
 app.MapGet("/vacancies", async (
@@ -142,7 +196,7 @@ app.MapGet("/vacancies", async (
         PageSize = pageSize ?? 20,
     }, ct);
     return Results.Ok(result);
-});
+}).RequireRateLimiting("public");
 
 var filters = app.MapGroup("/me/filters").RequireAuthorization();
 
@@ -235,6 +289,43 @@ applications.MapDelete("/{id:int}", async (int id, IApplicationService service, 
     var userId = user.GetUserId();
     if (userId is null) return Results.Unauthorized();
     return await service.DeleteAsync(userId.Value, id, ct) ? Results.NoContent() : Results.NotFound();
+});
+
+var employer = app.MapGroup("/employer")
+    .RequireAuthorization(policy => policy.RequireRole(nameof(UserRole.Employer)));
+
+employer.MapPost("/vacancies", async (CreateVacancyRequest request, IEmployerService service, ClaimsPrincipal user, CancellationToken ct) =>
+{
+    var userId = user.GetUserId();
+    if (userId is null) return Results.Unauthorized();
+    if (RequestValidation.ForEmployerVacancy(request) is { } problem) return problem;
+    var created = await service.PostVacancyAsync(userId.Value, request, ct);
+    return Results.Created($"/vacancies/{created.Id}", created);
+});
+
+employer.MapGet("/applications", async (IEmployerService service, ClaimsPrincipal user, CancellationToken ct) =>
+{
+    var userId = user.GetUserId();
+    return userId is null ? Results.Unauthorized() : Results.Ok(await service.ListApplicationsAsync(userId.Value, ct));
+});
+
+employer.MapPatch("/applications/{id:int}/status", async (
+    int id, UpdateApplicationStatusRequest request, IEmployerService service,
+    IHubContext<VacancyHub> hub, ClaimsPrincipal user, CancellationToken ct) =>
+{
+    var userId = user.GetUserId();
+    if (userId is null) return Results.Unauthorized();
+    var outcome = await service.ChangeApplicationStatusAsync(userId.Value, id, request, ct);
+    // Решение работодателя прилетает кандидату в реальном времени (его персональный канал).
+    if (outcome.Result == StatusChangeResult.Changed && outcome.CandidateUserId is { } candidateId)
+        await hub.Clients.User(candidateId.ToString()).SendAsync("ApplicationStatusChanged", outcome.Application, ct);
+    return outcome.Result switch
+    {
+        StatusChangeResult.Changed => Results.Ok(outcome.Application),
+        StatusChangeResult.NotFound => Results.NotFound(),
+        StatusChangeResult.IllegalTransition => Results.UnprocessableEntity(new { error = "illegal_transition" }),
+        _ => Results.Conflict(new { error = "version_conflict" }),
+    };
 });
 
 app.MapHub<VacancyHub>("/hubs/vacancies");

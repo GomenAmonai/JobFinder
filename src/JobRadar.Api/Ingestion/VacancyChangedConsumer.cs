@@ -25,6 +25,8 @@ public sealed class VacancyChangedConsumer(
     private static readonly JsonSerializerOptions JsonOptions =
         new(JsonSerializerDefaults.Web) { Converters = { new JsonStringEnumConverter() } };
 
+    // Consume() у Confluent.Kafka синхронный и блокирующий — уводим цикл с потока старта хоста,
+    // чтобы не задерживать запуск остальных hosted-сервисов.
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
         => Task.Run(() => ConsumeLoop(stoppingToken), stoppingToken);
 
@@ -36,6 +38,8 @@ public sealed class VacancyChangedConsumer(
             BootstrapServers = settings.BootstrapServers,
             GroupId = settings.ConsumerGroup,
             AutoOffsetReset = AutoOffsetReset.Latest,
+            // Live-лента эфемерна (только новые сообщения): авто-коммит достаточен, потеря
+            // одного push при падении некритична — в отличие от приёма (там ручной коммит).
             EnableAutoCommit = true,
         }).Build();
 
@@ -71,7 +75,10 @@ public sealed class VacancyChangedConsumer(
                     if (changed is not null)
                     {
                         await hub.Clients.All.SendAsync("VacancyChanged", changed, ct);
-                        await PushMatchesAsync(changed, ct);
+                        // Таргетированный «новая вакансия по твоему фильтру» — только на ВСТАВКЕ:
+                        // иначе каждый ре-полл коллектора (Updated) спамил бы матчем уже виденную вакансию.
+                        if (changed.Outcome == UpsertOutcome.Inserted)
+                            await PushMatchesAsync(changed, ct);
                     }
                 }
                 catch (JsonException ex)

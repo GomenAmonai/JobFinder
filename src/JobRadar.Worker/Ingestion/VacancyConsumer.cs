@@ -22,6 +22,7 @@ public sealed class VacancyConsumer(
     private static readonly JsonSerializerOptions JsonOptions =
         new(JsonSerializerDefaults.Web) { Converters = { new JsonStringEnumConverter() } };
 
+    // Consume() у Confluent.Kafka синхронный и блокирующий — уводим цикл с потока старта хоста.
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
         => Task.Run(() => ConsumeLoop(stoppingToken), stoppingToken);
 
@@ -74,8 +75,9 @@ public sealed class VacancyConsumer(
                 }
                 catch (JsonException ex)
                 {
-                    // Битое сообщение не должно навсегда блокировать партишн — логируем и пропускаем.
-                    logger.LogError(ex, "Skipping malformed message at {Offset}", result.TopicPartitionOffset);
+                    // Битое сообщение не должно навсегда блокировать партишн — в dead-letter и дальше.
+                    logger.LogError(ex, "Malformed message at {Offset} -> dead-letter", result.TopicPartitionOffset);
+                    await PublishDeadLetterAsync(result, ex, ct);
                     consumer.Commit(result);
                 }
                 catch (OperationCanceledException)
@@ -84,9 +86,9 @@ public sealed class VacancyConsumer(
                 }
                 catch (Exception ex)
                 {
-                    // Сбой обработки одной записи не должен ронять весь конвейер;
-                    // в проде такие сообщения уходили бы в dead-letter topic.
-                    logger.LogError(ex, "Processing failed, skipping message at {Offset}", result.TopicPartitionOffset);
+                    // Сбой обработки одной записи не должен ронять конвейер — сохраняем в dead-letter.
+                    logger.LogError(ex, "Processing failed at {Offset} -> dead-letter", result.TopicPartitionOffset);
+                    await PublishDeadLetterAsync(result, ex, ct);
                     consumer.Commit(result);
                 }
             }
@@ -123,6 +125,27 @@ public sealed class VacancyConsumer(
                 Outcome = outcome,
             },
             ct);
+    }
+
+    private async Task PublishDeadLetterAsync(ConsumeResult<string, string> result, Exception ex, CancellationToken ct)
+    {
+        try
+        {
+            await publisher.PublishAsync(options.Value.DeadLetterTopic, result.Message.Key, new DeadLetterEnvelope
+            {
+                SourceTopic = options.Value.RawVacanciesTopic,
+                Key = result.Message.Key,
+                Payload = result.Message.Value,
+                Error = ex.Message,
+                Offset = result.TopicPartitionOffset.ToString(),
+                FailedAt = DateTimeOffset.UtcNow,
+            }, ct);
+        }
+        catch (Exception dlqEx)
+        {
+            // Падение публикации в dead-letter не должно ронять консьюмер — лог и дальше.
+            logger.LogError(dlqEx, "Failed to publish to dead-letter topic");
+        }
     }
 
     private static async Task<bool> DelayAsync(CancellationToken ct)

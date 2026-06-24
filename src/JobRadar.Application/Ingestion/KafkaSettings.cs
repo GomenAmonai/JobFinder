@@ -12,5 +12,6 @@ public sealed class KafkaSettings
     public string BootstrapServers { get; set; } = "localhost:9092";
     public string RawVacanciesTopic { get; set; } = "vacancies.raw";
     public string ChangedVacanciesTopic { get; set; } = "vacancies.changed";
+    public string DeadLetterTopic { get; set; } = "vacancies.dead-letter";
     public string ConsumerGroup { get; set; } = "jobradar";
 }
