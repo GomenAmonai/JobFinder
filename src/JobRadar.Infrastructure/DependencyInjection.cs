@@ -1,8 +1,10 @@
+using JobRadar.Application.Applications;
 using JobRadar.Application.Auth;
 using JobRadar.Application.Ingestion;
 using JobRadar.Application.SavedFilters;
 using JobRadar.Application.Vacancies;
 using JobRadar.Domain.Entities;
+using JobRadar.Infrastructure.Applications;
 using JobRadar.Infrastructure.Auth;
 using JobRadar.Infrastructure.Ingestion;
 using JobRadar.Infrastructure.Persistence;
@@ -25,6 +27,7 @@ public static class DependencyInjection
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<ISavedFilterService, SavedFilterService>();
         services.AddScoped<ISavedFilterMatcher, SavedFilterMatcher>();
+        services.AddScoped<IApplicationService, ApplicationService>();
         services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
         services.TryAddSingleton(TimeProvider.System);
         return services;

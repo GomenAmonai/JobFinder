@@ -48,4 +48,9 @@ internal static class RequestValidation
         if (q is { Length: > 100 }) errors["q"] = ["At most 100 characters."];
         return errors.Count > 0 ? Results.ValidationProblem(errors) : null;
     }
+
+    public static IResult? ForApplication(string? coverLetter)
+        => coverLetter is { Length: > 5000 }
+            ? Results.ValidationProblem(new Dictionary<string, string[]> { ["coverLetter"] = ["At most 5000 characters."] })
+            : null;
 }
