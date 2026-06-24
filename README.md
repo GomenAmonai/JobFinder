@@ -100,10 +100,17 @@ cd frontend && npm install && npm run dev
 ```
 
 > Локальные dev-значения (Postgres-креды, JWT signing key в `appsettings`) —
-> throwaway, в git только для локальной разработки. Перед не-локальным деплоем:
-> секреты в env/secret-store (+ fail-fast, если ключ — плейсхолдер), HTTPS/HSTS,
-> rate limiting расширить с `/auth` на `/vacancies`, `UseExceptionHandler`,
-> origin CORS из конфигурации, ротация refresh с инвалидацией всей цепочки при reuse.
+> throwaway, в git только для локальной разработки.
+>
+> Реализовано (вне Development): fail-fast на дев/слабом JWT-ключе, HSTS +
+> HTTPS-redirect, `UseExceptionHandler`+ProblemDetails (без stack-trace), security-
+> заголовки, rate limiting на `/auth` и `/vacancies`, origin CORS из конфигурации
+> (`Cors:AllowedOrigins`), ротация refresh с инвалидацией всей цепочки при reuse,
+> OpenTelemetry (traces+metrics) с OTLP при заданном `OTEL_EXPORTER_OTLP_ENDPOINT`.
+>
+> Перед реальным деплоем остаётся: настоящие секреты в env/secret-store; верификация
+> работодателя (сейчас роль self-service — демо); TTL/retention вакансий (требует
+> смены cascade-FK, чтобы не удалять отклики); dead-letter — обработчик/реплей.
 
 ## Тесты
 

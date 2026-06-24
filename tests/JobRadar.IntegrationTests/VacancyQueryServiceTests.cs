@@ -84,6 +84,24 @@ public sealed class VacancyQueryServiceTests : IAsyncLifetime
         result.Total.Should().Be(1);
     }
 
+    [Fact]
+    public async Task Dedup_keeps_the_duplicate_that_matches_the_filtered_facet()
+    {
+        await using (var seed = new JobRadarDbContext(_options))
+        {
+            // Первый по Id — без рынка; дубль с тем же ключом несёт Market="Европа".
+            seed.Vacancies.Add(MakeWithKey("first", "remotive", "Faceted Role", "acme|faceted role"));
+            var withMarket = MakeWithKey("second", "remoteok", "Faceted Role", "acme|faceted role");
+            withMarket.Market = "Европа";
+            seed.Vacancies.Add(withMarket);
+            await seed.SaveChangesAsync();
+        }
+
+        var result = await Search(new VacancyQuery { Market = "Европа" });
+
+        result.Items.Should().ContainSingle(v => v.ExternalId == "second");
+    }
+
     private async Task<PagedResult<VacancyDto>> Search(VacancyQuery query)
     {
         await using var db = new JobRadarDbContext(_options);

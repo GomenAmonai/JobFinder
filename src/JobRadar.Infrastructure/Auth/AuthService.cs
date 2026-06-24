@@ -82,8 +82,18 @@ public sealed class AuthService(
             .Include(t => t.User)
             .SingleOrDefaultAsync(t => t.TokenHash == hash, ct);
 
-        if (stored?.User is null || stored.RevokedAt is not null || stored.ExpiresAt <= now)
+        if (stored?.User is null || stored.ExpiresAt <= now)
             return AuthOutcome.Fail(AuthError.InvalidRefreshToken);
+
+        if (stored.RevokedAt is not null)
+        {
+            // Повторное предъявление уже отротированного токена = вероятная кража (RFC 9700):
+            // гасим всю живую цепочку пользователя, а не только этот токен.
+            await db.RefreshTokens
+                .Where(t => t.UserId == stored.UserId && t.RevokedAt == null)
+                .ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAt, now), ct);
+            return AuthOutcome.Fail(AuthError.InvalidRefreshToken);
+        }
 
         stored.RevokedAt = now; // ротация: гасим использованный токен и выдаём новую пару
         return AuthOutcome.Success(await IssueTokensAsync(stored.User, ct));
