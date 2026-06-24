@@ -36,15 +36,17 @@ public class JobRadarDbContext(DbContextOptions<JobRadarDbContext> options) : Db
         v.Property(x => x.Level).HasMaxLength(30);
         v.Property(x => x.Stack).HasMaxLength(50);
         v.Property(x => x.SalaryCurrency).HasMaxLength(10);
-        // Задел под нативные вакансии работодателей: necessary FK появится вместе с
-        // employer-модулем, пока это просто опциональная ссылка на автора.
-        v.HasIndex(x => x.PostedByUserId);
+        v.Property(x => x.DedupKey).HasMaxLength(820); // company(300)+'|'+title(500) после нормализации
+        v.HasIndex(x => x.DedupKey);
+        v.HasIndex(x => x.PostedByUserId); // автор нативной вакансии; фильтрация откликов работодателя
 
         var u = b.Entity<User>();
         u.HasKey(x => x.Id);
         u.HasIndex(x => x.Email).IsUnique();
         u.Property(x => x.Email).HasMaxLength(256);
         u.Property(x => x.DisplayName).HasMaxLength(100);
+        // DB-дефолт бэкфилит существующие строки на Candidate при миграции; на вставке роль ставит AuthService.
+        u.Property(x => x.Role).HasConversion<string>().HasMaxLength(20).HasDefaultValue(UserRole.Candidate);
 
         var rt = b.Entity<RefreshToken>();
         rt.HasKey(x => x.Id);

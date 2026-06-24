@@ -8,6 +8,7 @@ public class User
     public required string Email { get; set; }
     public string PasswordHash { get; set; } = string.Empty;
     public string? DisplayName { get; set; }
+    public UserRole Role { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; }
 }

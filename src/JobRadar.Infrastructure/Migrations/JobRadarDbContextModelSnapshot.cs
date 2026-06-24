@@ -173,6 +173,13 @@ namespace JobRadar.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Candidate");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Email")
@@ -192,6 +199,10 @@ namespace JobRadar.Infrastructure.Migrations
                     b.Property<string>("Company")
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)");
+
+                    b.Property<string>("DedupKey")
+                        .HasMaxLength(820)
+                        .HasColumnType("character varying(820)");
 
                     b.Property<string>("ExternalId")
                         .IsRequired()
@@ -261,6 +272,8 @@ namespace JobRadar.Infrastructure.Migrations
                         .HasColumnName("xmin");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("DedupKey");
 
                     b.HasIndex("PostedByUserId");
 

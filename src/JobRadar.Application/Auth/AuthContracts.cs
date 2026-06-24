@@ -1,6 +1,8 @@
+using JobRadar.Domain.Entities;
+
 namespace JobRadar.Application.Auth;
 
-public sealed record RegisterRequest(string Email, string Password, string? DisplayName);
+public sealed record RegisterRequest(string Email, string Password, string? DisplayName, UserRole Role = UserRole.Candidate);
 
 public sealed record LoginRequest(string Email, string Password);
 
