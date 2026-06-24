@@ -1,0 +1,11 @@
+# Keep the Docker build context small and clean (build context = repo root).
+**/bin
+**/obj
+**/.vs
+frontend/node_modules
+frontend/dist
+tests
+.git
+.github
+**/*.user
+scratchpad

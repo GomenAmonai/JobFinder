@@ -14,7 +14,9 @@ using JobRadar.Application.SavedFilters;
 using JobRadar.Application.Vacancies;
 using JobRadar.Domain.Entities;
 using JobRadar.Infrastructure;
+using JobRadar.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.IdentityModel.Tokens;
 using OpenTelemetry.Metrics;
@@ -118,6 +120,14 @@ builder.Services.AddInfrastructure(
         ?? throw new InvalidOperationException("Missing connection string 'Postgres'."));
 
 var app = builder.Build();
+
+// Опционально накатываем миграции на старте — для платформ без отдельного release-шага
+// (напр. Railway): выставить RunMigrationsOnStartup=true. По умолчанию выключено.
+if (app.Configuration.GetValue<bool>("RunMigrationsOnStartup"))
+{
+    using var scope = app.Services.CreateScope();
+    await scope.ServiceProvider.GetRequiredService<JobRadarDbContext>().Database.MigrateAsync();
+}
 
 if (app.Environment.IsDevelopment())
 {

@@ -147,6 +147,14 @@ cd frontend && npm install && npm run dev
 > работодателя (сейчас роль self-service — демо), TTL/retention вакансий (требует смены
 > cascade-FK), обработчик/реплей dead-letter.
 
+## Деплой
+
+Контейнеры для всех сервисов готовы: `src/JobRadar.Api/Dockerfile`,
+`src/JobRadar.Worker/Dockerfile`, `frontend/Dockerfile` (multi-stage, .NET 10 / Node).
+API биндится на `$PORT` и опционально накатывает миграции на старте
+(`RunMigrationsOnStartup=true`). Пошаговый план для Railway (5 сервисов, переменные,
+Kafka, порядок) — в [DEPLOY.md](DEPLOY.md).
+
 ## Тесты
 
 ```bash
