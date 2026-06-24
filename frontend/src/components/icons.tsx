@@ -100,3 +100,62 @@ export function CloseIcon({ size = 14, className }: IconProps) {
     </svg>
   );
 }
+
+export function BookmarkIcon({ size = 15, className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <path d="M6 4h12v16l-6-4-6 4z" {...STROKE} />
+    </svg>
+  );
+}
+
+export function BriefcaseIcon({ size = 16, className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <rect x="3" y="7" width="18" height="13" rx="2" {...STROKE} />
+      <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" {...STROKE} />
+    </svg>
+  );
+}
+
+export function UserIcon({ size = 15, className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <circle cx="12" cy="8" r="3.5" {...STROKE} />
+      <path d="M5 20a7 7 0 0 1 14 0" {...STROKE} />
+    </svg>
+  );
+}
+
+export function LogOutIcon({ size = 15, className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3" {...STROKE} />
+      <path d="M16 16l4-4-4-4M20 12H9" {...STROKE} />
+    </svg>
+  );
+}
+
+export function PlusIcon({ size = 15, className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <path d="M12 5v14M5 12h14" {...STROKE} />
+    </svg>
+  );
+}
+
+export function CheckIcon({ size = 14, className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <path d="m5 12 4.5 4.5L19 7" {...STROKE} />
+    </svg>
+  );
+}
+
+export function TrashIcon({ size = 14, className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-9 0 1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" {...STROKE} />
+    </svg>
+  );
+}
