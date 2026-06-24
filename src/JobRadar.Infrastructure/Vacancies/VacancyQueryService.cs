@@ -16,15 +16,6 @@ public sealed class VacancyQueryService(JobRadarDbContext db) : IVacancyQuerySer
 
         var filtered = db.Vacancies.AsNoTracking();
 
-        // Сворачиваем кросс-источниковые дубли: на каждый непустой ключ дедупликации
-        // показываем каноническую (минимальный Id = первая увиденная) вакансию;
-        // записи без ключа проходят как есть. Канон считается по всей таблице, не по фильтру.
-        var canonicalIds = db.Vacancies
-            .Where(v => v.DedupKey != null)
-            .GroupBy(v => v.DedupKey)
-            .Select(g => g.Min(x => x.Id));
-        filtered = filtered.Where(v => v.DedupKey == null || canonicalIds.Contains(v.Id));
-
         if (!string.IsNullOrWhiteSpace(query.Market))
             filtered = filtered.Where(v => v.Market == query.Market);
         if (!string.IsNullOrWhiteSpace(query.Level))
@@ -46,6 +37,16 @@ public sealed class VacancyQueryService(JobRadarDbContext db) : IVacancyQuerySer
                 || (v.Company != null && EF.Functions.ILike(v.Company, term, "\\"))
                 || (v.Skills != null && EF.Functions.ILike(v.Skills, term, "\\")));
         }
+
+        // Сворачиваем кросс-источниковые дубли ПОСЛЕ фильтров: канон (минимальный Id =
+        // первый увиденный) выбирается среди строк, уже прошедших фильтр. Так дубль,
+        // совпавший по грани, которой нет у первой строки (напр. Market), не теряется.
+        // Записи без ключа дедупликации проходят как есть.
+        var canonicalIds = filtered
+            .Where(v => v.DedupKey != null)
+            .GroupBy(v => v.DedupKey)
+            .Select(g => g.Min(x => x.Id));
+        filtered = filtered.Where(v => v.DedupKey == null || canonicalIds.Contains(v.Id));
 
         var total = await filtered.CountAsync(ct);
 

@@ -21,7 +21,7 @@ public sealed class KafkaTopicInitializer(IOptions<KafkaSettings> options, ILogg
             BootstrapServers = settings.BootstrapServers,
         }).Build();
 
-        var topics = new[] { settings.RawVacanciesTopic, settings.ChangedVacanciesTopic }
+        var topics = new[] { settings.RawVacanciesTopic, settings.ChangedVacanciesTopic, settings.DeadLetterTopic }
             .Select(name => new TopicSpecification { Name = name, NumPartitions = 1, ReplicationFactor = 1 })
             .ToList();
 

@@ -110,15 +110,7 @@ public sealed class EmployerService(JobRadarDbContext db, TimeProvider clock) : 
         UpdatedAt = a.UpdatedAt,
         CandidateEmail = candidateEmail,
         CandidateDisplayName = candidateDisplayName,
-        Vacancy = new ApplicationVacancySummary
-        {
-            Id = a.Vacancy!.Id,
-            Title = a.Vacancy.Title,
-            Company = a.Vacancy.Company,
-            Url = a.Vacancy.Url,
-            Market = a.Vacancy.Market,
-            Level = a.Vacancy.Level,
-        },
+        Vacancy = ApplicationDtoMapper.ToVacancySummary(a.Vacancy!),
     };
 
     private static VacancyDto ToVacancyDto(Vacancy v) => new()

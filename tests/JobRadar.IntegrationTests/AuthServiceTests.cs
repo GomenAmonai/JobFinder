@@ -120,6 +120,23 @@ public sealed class AuthServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Reusing_a_rotated_token_revokes_the_whole_chain()
+    {
+        string original, rotated;
+        await using (var db = new JobRadarDbContext(_options))
+            original = (await NewService(db).RegisterAsync(new RegisterRequest("chain@x.com", "P@ssw0rd!", null))).Tokens!.RefreshToken;
+        await using (var db = new JobRadarDbContext(_options))
+            rotated = (await NewService(db).RefreshAsync(original)).Tokens!.RefreshToken;
+        await using (var db = new JobRadarDbContext(_options))
+            await NewService(db).RefreshAsync(original); // reuse of the revoked token -> revoke the chain
+
+        await using var verify = new JobRadarDbContext(_options);
+        var afterReuse = await NewService(verify).RefreshAsync(rotated);
+
+        afterReuse.Error.Should().Be(AuthError.InvalidRefreshToken);
+    }
+
+    [Fact]
     public async Task Register_persists_the_requested_role()
     {
         await using var db = new JobRadarDbContext(_options);

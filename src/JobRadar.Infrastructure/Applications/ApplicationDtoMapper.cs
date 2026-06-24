@@ -16,14 +16,16 @@ internal static class ApplicationDtoMapper
         Version = version.ToString(),
         CreatedAt = a.CreatedAt,
         UpdatedAt = a.UpdatedAt,
-        Vacancy = new ApplicationVacancySummary
-        {
-            Id = a.Vacancy!.Id,
-            Title = a.Vacancy.Title,
-            Company = a.Vacancy.Company,
-            Url = a.Vacancy.Url,
-            Market = a.Vacancy.Market,
-            Level = a.Vacancy.Level,
-        },
+        Vacancy = ToVacancySummary(a.Vacancy!),
+    };
+
+    public static ApplicationVacancySummary ToVacancySummary(Vacancy v) => new()
+    {
+        Id = v.Id,
+        Title = v.Title,
+        Company = v.Company,
+        Url = v.Url,
+        Market = v.Market,
+        Level = v.Level,
     };
 }
