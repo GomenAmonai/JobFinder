@@ -33,4 +33,8 @@ public class Vacancy
 
     public DateTimeOffset FirstSeen { get; set; }
     public DateTimeOffset LastSeen { get; set; }
+
+    // NOTE: задел под нативные вакансии работодателей (Phase «посредник»):
+    // у агрегированных вакансий null, у запощенных на JobRadar — Id работодателя.
+    public Guid? PostedByUserId { get; set; }
 }

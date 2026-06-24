@@ -9,6 +9,7 @@ public class JobRadarDbContext(DbContextOptions<JobRadarDbContext> options) : Db
     public DbSet<User> Users => Set<User>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<SavedFilter> SavedFilters => Set<SavedFilter>();
+    public DbSet<JobApplication> Applications => Set<JobApplication>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -35,6 +36,9 @@ public class JobRadarDbContext(DbContextOptions<JobRadarDbContext> options) : Db
         v.Property(x => x.Level).HasMaxLength(30);
         v.Property(x => x.Stack).HasMaxLength(50);
         v.Property(x => x.SalaryCurrency).HasMaxLength(10);
+        // Задел под нативные вакансии работодателей: necessary FK появится вместе с
+        // employer-модулем, пока это просто опциональная ссылка на автора.
+        v.HasIndex(x => x.PostedByUserId);
 
         var u = b.Entity<User>();
         u.HasKey(x => x.Id);
@@ -59,6 +63,21 @@ public class JobRadarDbContext(DbContextOptions<JobRadarDbContext> options) : Db
         sf.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
         // xmin как concurrency-token — здесь он реально задействован (интерактивные правки).
         sf.Property<uint>("xmin")
+            .HasColumnName("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate()
+            .IsConcurrencyToken();
+
+        var ap = b.Entity<JobApplication>();
+        ap.HasKey(x => x.Id);
+        // Откликнуться на одну вакансию можно только раз — этим держится идемпотентность.
+        ap.HasIndex(x => new { x.UserId, x.VacancyId }).IsUnique();
+        ap.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+        ap.Property(x => x.CoverLetter).HasMaxLength(5000);
+        ap.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+        ap.HasOne(x => x.Vacancy).WithMany().HasForeignKey(x => x.VacancyId).OnDelete(DeleteBehavior.Cascade);
+        // xmin как concurrency-token — интерактивная смена статуса под optimistic concurrency.
+        ap.Property<uint>("xmin")
             .HasColumnName("xmin")
             .HasColumnType("xid")
             .ValueGeneratedOnAddOrUpdate()
