@@ -1,54 +1,54 @@
 :root {
   color-scheme: dark;
 
-  /* Surfaces — slate, layered, never pure black */
-  --color-bg: #0b1120;
-  --color-bg-elevated: #0f172a;
-  --color-surface: #1e293b;
-  --color-surface-hover: #243349;
-  --color-surface-translucent: rgba(30, 41, 59, 0.72);
+  /* Surfaces — warm near-black, flat (Vercel / Linear in the dark) */
+  --color-bg: #0a0a0b;
+  --color-bg-elevated: #131315;
+  --color-surface: #19191c;
+  --color-surface-hover: #1f1f22;
+  --color-surface-translucent: #0e0e10; /* now solid; name kept for compat */
 
-  /* Borders */
-  --color-border: #334155;
-  --color-border-strong: #475569;
+  /* Borders — crisp white-alpha hairlines */
+  --color-border: rgba(255, 255, 255, 0.10);
+  --color-border-strong: rgba(255, 255, 255, 0.16);
 
-  /* Text */
-  --color-text: #e2e8f0;
-  --color-text-strong: #f8fafc;
-  --color-text-muted: #94a3b8;
-  --color-text-faint: #64748b;
+  /* Text — warm neutral, never pure white */
+  --color-text: #ebeae7;
+  --color-text-strong: #f7f6f4;
+  --color-text-muted: #8f8e8a;
+  --color-text-faint: #66645f;
 
-  /* Accent */
-  --color-accent: #2563eb;
-  --color-accent-hover: #3b82f6;
-  --color-accent-soft: rgba(37, 99, 235, 0.16);
-  --color-accent-ring: rgba(59, 130, 246, 0.55);
+  /* Accent — coral (the one brand color) */
+  --color-accent: #ef7a4c;
+  --color-accent-hover: #f59870;
+  --color-accent-soft: rgba(239, 122, 76, 0.14);
+  --color-accent-ring: rgba(245, 152, 112, 0.5);
 
   /* Semantic status */
-  --color-success: #10b981;
-  --color-success-soft: rgba(16, 185, 129, 0.16);
-  --color-warning: #f59e0b;
-  --color-danger: #ef4444;
-  --color-danger-soft: rgba(239, 68, 68, 0.14);
+  --color-success: #46c08a;
+  --color-success-soft: rgba(70, 192, 138, 0.14);
+  --color-warning: #d89a3c;
+  --color-danger: #e5564a;
+  --color-danger-soft: rgba(229, 86, 74, 0.14);
 
-  /* Level badge palette */
-  --level-junior: #22c55e;
-  --level-junior-soft: rgba(34, 197, 94, 0.16);
-  --level-middle: #3b82f6;
-  --level-middle-soft: rgba(59, 130, 246, 0.16);
-  --level-senior: #f43f5e;
-  --level-senior-soft: rgba(244, 63, 94, 0.16);
-  --level-unknown: #94a3b8;
-  --level-unknown-soft: rgba(148, 163, 184, 0.14);
+  /* Level badge palette — warm, restrained triad */
+  --level-junior: #5cba8a;
+  --level-junior-soft: rgba(92, 186, 138, 0.14);
+  --level-middle: #c79a4e;
+  --level-middle-soft: rgba(199, 154, 78, 0.15);
+  --level-senior: #f59870;
+  --level-senior-soft: rgba(245, 152, 112, 0.14);
+  --level-unknown: #76746f;
+  --level-unknown-soft: rgba(118, 116, 111, 0.14);
 
-  /* Market badge — greenish per brief */
-  --color-market: #34d399;
-  --color-market-soft: rgba(52, 211, 153, 0.14);
+  /* Market badge — calm green */
+  --color-market: #63d3a2;
+  --color-market-soft: rgba(99, 211, 162, 0.12);
 
-  /* Typography */
-  --font-display: 'Space Grotesk', 'Segoe UI', sans-serif;
-  --font-body: 'Space Grotesk', 'Segoe UI', sans-serif;
-  --font-mono: 'JetBrains Mono', 'SFMono-Regular', ui-monospace, monospace;
+  /* Typography — Geist + Geist Mono */
+  --font-display: 'Geist', -apple-system, system-ui, sans-serif;
+  --font-body: 'Geist', -apple-system, system-ui, sans-serif;
+  --font-mono: 'Geist Mono', 'SFMono-Regular', ui-monospace, monospace;
 
   --text-xs: 0.75rem;
   --text-sm: 0.8125rem;
@@ -72,23 +72,23 @@
   --space-7: 3rem;
   --space-8: 4rem;
 
-  /* Radius */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
+  /* Radius — tight & editorial */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
   --radius-pill: 999px;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(2, 6, 23, 0.4);
-  --shadow-md: 0 8px 24px -12px rgba(2, 6, 23, 0.8);
-  --shadow-lg: 0 24px 60px -24px rgba(2, 6, 23, 0.9);
+  /* Shadows — minimal, neutral black (cards lean on borders) */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 16px -8px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 16px 40px -20px rgba(0, 0, 0, 0.7);
 
-  /* Motion */
-  --transition-fast: 120ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  /* Motion — quick, precise */
+  --transition-fast: 110ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 180ms cubic-bezier(0.4, 0, 0.2, 1);
 
   /* Layout */
-  --container-max: 1240px;
+  --container-max: 1280px;
   --z-toast: 100;
   --z-header: 50;
 }
