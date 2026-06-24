@@ -22,8 +22,8 @@ New service → **Deploy from Docker image** → `apache/kafka:3.9.0`. Variables
 ```
 KAFKA_NODE_ID=1
 KAFKA_PROCESS_ROLES=broker,controller
-KAFKA_CONTROLLER_QUORUM_VOTERS=1@localhost:9093
-KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+KAFKA_CONTROLLER_QUORUM_VOTERS=1@kafka.railway.internal:9093
+KAFKA_LISTENERS=PLAINTEXT://kafka.railway.internal:9092,CONTROLLER://kafka.railway.internal:9093
 KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka.railway.internal:9092
 KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
 KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
@@ -34,7 +34,12 @@ KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
 KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS=0
 ```
 
-- `kafka.railway.internal` is the service's private hostname — rename the env if your service isn't named `kafka`.
+- **Bind listeners to the private hostname, NOT `0.0.0.0`** — the `apache/kafka` KRaft
+  storage-format step rejects the meta-address `0.0.0.0` in advertised listeners
+  (`advertised.listeners cannot use the nonroutable meta-address 0.0.0.0`). Binding to
+  `kafka.railway.internal` (which resolves to the container's own address) avoids it.
+- `kafka.railway.internal` is the service's private hostname — rename the env (all three
+  listener lines) if your service isn't named `kafka`.
 - Clients reach it over the **private network**, so no public domain is needed.
 - Topics are created automatically by the Worker (`KafkaTopicInitializer`). Storage is
   reformatted on restart unless you attach a volume — fine for a demo (only missed live
