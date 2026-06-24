@@ -1,13 +1,11 @@
 import { AlertIcon, InboxIcon } from './icons';
 
-const COLUMN_COUNT = 10;
-
-export function TableSkeleton({ rows = 8 }: { rows?: number }) {
+export function TableSkeleton({ rows = 8, columns = 10 }: { rows?: number; columns?: number }) {
   return (
     <tbody>
       {Array.from({ length: rows }).map((_, rowIndex) => (
         <tr className="skeleton-row" key={rowIndex}>
-          {Array.from({ length: COLUMN_COUNT }).map((__, cellIndex) => (
+          {Array.from({ length: columns }).map((__, cellIndex) => (
             <td key={cellIndex}>
               <span
                 className="skeleton-bar"

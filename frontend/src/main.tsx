@@ -3,6 +3,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { App } from './App';
+import { AuthProvider } from './hooks/use-auth';
 import { ToastProvider } from './hooks/use-toasts';
 
 import './styles/tokens.css';
@@ -26,9 +27,11 @@ if (!rootElement) {
 createRoot(rootElement).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <ToastProvider>
-        <App />
-      </ToastProvider>
+      <AuthProvider>
+        <ToastProvider>
+          <App />
+        </ToastProvider>
+      </AuthProvider>
     </QueryClientProvider>
   </StrictMode>,
 );

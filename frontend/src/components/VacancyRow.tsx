@@ -1,12 +1,18 @@
 import { formatPublishedDate, splitSkills } from '../api/format';
 import { LevelBadge, MarketBadge, StackBadge } from './Badges';
-import { ExternalLinkIcon } from './icons';
+import { CheckIcon, ExternalLinkIcon } from './icons';
 
 import type { VacancyDto } from '../types/vacancy';
 
 const MAX_VISIBLE_SKILLS = 6;
 
-export function VacancyRow({ vacancy }: { vacancy: VacancyDto }) {
+interface VacancyRowProps {
+  vacancy: VacancyDto;
+  applied?: boolean;
+  onApply?: (vacancy: VacancyDto) => void;
+}
+
+export function VacancyRow({ vacancy, applied, onApply }: VacancyRowProps) {
   const skills = splitSkills(vacancy.skills);
   const visibleSkills = skills.slice(0, MAX_VISIBLE_SKILLS);
   const overflowCount = skills.length - visibleSkills.length;
@@ -69,6 +75,19 @@ export function VacancyRow({ vacancy }: { vacancy: VacancyDto }) {
       <td>
         <span className="cell-mono">{formatPublishedDate(vacancy.publishedAt)}</span>
       </td>
+      {onApply && (
+        <td>
+          {applied ? (
+            <span className="applied-tag">
+              <CheckIcon size={13} /> Applied
+            </span>
+          ) : (
+            <button type="button" className="apply-button" onClick={() => onApply(vacancy)}>
+              Apply
+            </button>
+          )}
+        </td>
+      )}
     </tr>
   );
 }
