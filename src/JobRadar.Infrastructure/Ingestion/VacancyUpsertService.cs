@@ -65,6 +65,7 @@ public sealed class VacancyUpsertService(JobRadarDbContext db, TimeProvider cloc
                 .SetProperty(v => v.Skills, incoming.Skills)
                 .SetProperty(v => v.Url, incoming.Url)
                 .SetProperty(v => v.PublishedAt, incoming.PublishedAt)
+                .SetProperty(v => v.DedupKey, incoming.DedupKey)
                 .SetProperty(v => v.LastSeen, now), ct);
 
     private static bool IsUniqueViolation(DbUpdateException ex)

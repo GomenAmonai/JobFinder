@@ -18,12 +18,22 @@ builder.Services.AddHttpClient("remotive", client =>
     })
     .AddStandardResilienceHandler();
 
+builder.Services.AddHttpClient("remoteok", client =>
+    {
+        client.BaseAddress = new Uri("https://remoteok.com/");
+        client.Timeout = TimeSpan.FromSeconds(30);
+        // RemoteOK отдаёт 403 на запросы без User-Agent.
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("JobRadar/1.0 (+https://github.com/GomenAmonai/JobFinder)");
+    })
+    .AddStandardResilienceHandler();
+
 builder.Services.AddSingleton<IKafkaPublisher, KafkaPublisher>();
 
 // Топики создаём первыми, до consumer/collector.
 builder.Services.AddHostedService<KafkaTopicInitializer>();
 builder.Services.AddHostedService<VacancyConsumer>();
 builder.Services.AddHostedService<RemotiveCollector>();
+builder.Services.AddHostedService<RemoteOkCollector>();
 
 var host = builder.Build();
 host.Run();

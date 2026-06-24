@@ -37,6 +37,10 @@ public sealed class AuthService(
             Id = Guid.NewGuid(),
             Email = email,
             DisplayName = string.IsNullOrWhiteSpace(request.DisplayName) ? null : request.DisplayName.Trim(),
+            // Роль берётся из запроса осознанно: self-service регистрация работодателя без
+            // верификации (демо). Если у Employer появятся привилегии вне своих вакансий
+            // (биллинг, модерация) — роль нужно будет выдавать через отдельный проверенный путь.
+            Role = request.Role,
             CreatedAt = clock.GetUtcNow(),
         };
         user.PasswordHash = passwordHasher.HashPassword(user, request.Password);
@@ -78,8 +82,18 @@ public sealed class AuthService(
             .Include(t => t.User)
             .SingleOrDefaultAsync(t => t.TokenHash == hash, ct);
 
-        if (stored?.User is null || stored.RevokedAt is not null || stored.ExpiresAt <= now)
+        if (stored?.User is null || stored.ExpiresAt <= now)
             return AuthOutcome.Fail(AuthError.InvalidRefreshToken);
+
+        if (stored.RevokedAt is not null)
+        {
+            // Повторное предъявление уже отротированного токена = вероятная кража (RFC 9700):
+            // гасим всю живую цепочку пользователя, а не только этот токен.
+            await db.RefreshTokens
+                .Where(t => t.UserId == stored.UserId && t.RevokedAt == null)
+                .ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAt, now), ct);
+            return AuthOutcome.Fail(AuthError.InvalidRefreshToken);
+        }
 
         stored.RevokedAt = now; // ротация: гасим использованный токен и выдаём новую пару
         return AuthOutcome.Success(await IssueTokensAsync(stored.User, ct));
@@ -90,12 +104,16 @@ public sealed class AuthService(
         var now = clock.GetUtcNow();
         var accessExpires = now.AddMinutes(_jwt.AccessTokenMinutes);
 
+        // sub → ClaimTypes.NameIdentifier по дефолтному inbound-маппингу JwtBearer; на этом
+        // держится и SignalR Clients.User(userId), и GetUserId(). Role → ClaimTypes.Role для RequireRole.
+        // Если когда-то выключим MapInboundClaims — нужен явный IUserIdProvider по sub.
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new Claim("name", user.DisplayName ?? user.Email),
+            new Claim(ClaimTypes.Role, user.Role.ToString()),
         };
 
         var credentials = new SigningCredentials(

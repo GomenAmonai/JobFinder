@@ -76,6 +76,11 @@ public sealed class ApplicationService(JobRadarDbContext db, TimeProvider clock)
             .SingleOrDefaultAsync(a => a.Id == id && a.UserId == userId, ct);
         if (application is null)
             return new StatusChangeOutcome(StatusChangeResult.NotFound, null);
+        // На нативной вакансии (postedBy != null) стадии двигает работодатель; кандидат
+        // может только отозвать отклик. На агрегированной — это личный трекер, кандидат
+        // ведёт все стадии сам.
+        if (application.Vacancy!.PostedByUserId is not null && request.Status != ApplicationStatus.Withdrawn)
+            return new StatusChangeOutcome(StatusChangeResult.IllegalTransition, null);
         if (!ApplicationStatusTransitions.CanTransition(application.Status, request.Status))
             return new StatusChangeOutcome(StatusChangeResult.IllegalTransition, null);
         if (!uint.TryParse(request.Version, out var clientVersion))
@@ -112,24 +117,7 @@ public sealed class ApplicationService(JobRadarDbContext db, TimeProvider clock)
     private uint CurrentVersion(JobApplication application)
         => (uint)db.Entry(application).Property(XminProperty).CurrentValue!;
 
-    private static ApplicationDto ToDto(JobApplication a, uint version) => new()
-    {
-        Id = a.Id,
-        Status = a.Status,
-        CoverLetter = a.CoverLetter,
-        Version = version.ToString(),
-        CreatedAt = a.CreatedAt,
-        UpdatedAt = a.UpdatedAt,
-        Vacancy = new ApplicationVacancySummary
-        {
-            Id = a.Vacancy!.Id,
-            Title = a.Vacancy.Title,
-            Company = a.Vacancy.Company,
-            Url = a.Vacancy.Url,
-            Market = a.Vacancy.Market,
-            Level = a.Vacancy.Level,
-        },
-    };
+    private static ApplicationDto ToDto(JobApplication a, uint version) => ApplicationDtoMapper.ToDto(a, version);
 
     private static bool IsUniqueViolation(DbUpdateException ex)
         => ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation };
