@@ -16,6 +16,8 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="10.0.9" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.19.1" />
     <!-- Унификация EF Core вверх: Npgsql-провайдер 10.0.2 тянет EF 10.0.4, а Design — 10.0.9.
          Явная ссылка убирает конфликт версий у потребителей Infrastructure. -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.9" />
