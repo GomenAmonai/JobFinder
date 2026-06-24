@@ -3,19 +3,22 @@ using System.Text.Json.Serialization;
 using Confluent.Kafka;
 using JobRadar.Api.Hubs;
 using JobRadar.Application.Ingestion;
+using JobRadar.Application.SavedFilters;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
 
 namespace JobRadar.Api.Ingestion;
 
 /// <summary>
-/// Мост Kafka → SignalR: потребляет <c>vacancies.changed</c> и рассылает событие
-/// <c>VacancyChanged</c> всем подключённым клиентам. Так воркер (продюсер) и API
-/// (раздача) остаются развязанными процессами. Читает только новые сообщения
-/// (offset=Latest) — история клиенту при подключении не нужна.
+/// Мост Kafka → SignalR: потребляет <c>vacancies.changed</c>. Всем клиентам шлёт
+/// <c>VacancyChanged</c> (публичная live-лента); дополнительно — таргетированный
+/// <c>MatchedVacancy</c> тем аутентифицированным юзерам, чей сохранённый фильтр
+/// совпал. Воркер (продюсер) и API (раздача) остаются развязанными процессами.
+/// Читает только новые сообщения (offset=Latest).
 /// </summary>
 public sealed class VacancyChangedConsumer(
     IHubContext<VacancyHub> hub,
+    IServiceScopeFactory scopeFactory,
     IOptions<KafkaSettings> options,
     ILogger<VacancyChangedConsumer> logger) : BackgroundService
 {
@@ -66,7 +69,10 @@ public sealed class VacancyChangedConsumer(
                 {
                     var changed = JsonSerializer.Deserialize<VacancyChangedEvent>(result.Message.Value, JsonOptions);
                     if (changed is not null)
+                    {
                         await hub.Clients.All.SendAsync("VacancyChanged", changed, ct);
+                        await PushMatchesAsync(changed, ct);
+                    }
                 }
                 catch (JsonException ex)
                 {
@@ -78,6 +84,15 @@ public sealed class VacancyChangedConsumer(
         {
             consumer.Close();
         }
+    }
+
+    private async Task PushMatchesAsync(VacancyChangedEvent changed, CancellationToken ct)
+    {
+        await using var scope = scopeFactory.CreateAsyncScope();
+        var matcher = scope.ServiceProvider.GetRequiredService<ISavedFilterMatcher>();
+        var userIds = await matcher.FindMatchingUserIdsAsync(changed.Market, changed.Level, changed.Stack, changed.Title, ct);
+        foreach (var userId in userIds)
+            await hub.Clients.User(userId.ToString()).SendAsync("MatchedVacancy", changed, ct);
     }
 
     private static async Task<bool> DelayAsync(CancellationToken ct)

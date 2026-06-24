@@ -79,9 +79,11 @@ dotnet run --project src/JobRadar.Api
 cd frontend && npm install && npm run dev
 ```
 
-> Учётки Postgres в `appsettings`/`docker-compose` — локальные throwaway-значения.
-> Для не-локального деплоя: вынести в секреты/env, добавить rate limiting и
-> `UseExceptionHandler`, origin CORS брать из конфигурации.
+> Локальные dev-значения (Postgres-креды, JWT signing key в `appsettings`) —
+> throwaway, в git только для локальной разработки. Перед не-локальным деплоем:
+> секреты в env/secret-store (+ fail-fast, если ключ — плейсхолдер), HTTPS/HSTS,
+> rate limiting расширить с `/auth` на `/vacancies`, `UseExceptionHandler`,
+> origin CORS из конфигурации, ротация refresh с инвалидацией всей цепочки при reuse.
 
 ## Тесты
 
