@@ -58,7 +58,7 @@ public sealed class RemotiveCollector(
 
             foreach (var job in response?.Jobs ?? [])
             {
-                if (!IsRelevant(job.Title))
+                if (!VacancyRelevance.IsRelevant(job.Title))
                     continue;
 
                 await publisher.PublishAsync(topic, $"{Source}:{job.Id}", new RawVacancyMessage
@@ -79,18 +79,6 @@ public sealed class RemotiveCollector(
 
         logger.LogInformation("Remotive: produced {Count} vacancies", produced);
     }
-
-    private static bool IsRelevant(string? title)
-    {
-        if (string.IsNullOrWhiteSpace(title)) return false;
-        var t = title.ToLowerInvariant();
-        return Keywords.Any(t.Contains);
-    }
-
-    private static readonly string[] Keywords =
-        [".net", "c#", "asp.net", "dotnet", "backend", "back-end", "back end",
-         "full stack", "full-stack", "fullstack", "golang", "node", "software engineer",
-         "software developer", "web developer", "developer"];
 
     private sealed record RemotiveResponse(
         [property: JsonPropertyName("jobs")] List<RemotiveJob>? Jobs);

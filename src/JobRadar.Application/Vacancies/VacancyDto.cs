@@ -12,6 +12,9 @@ public sealed record VacancyDto
     public string? Stack { get; init; }
     public string? Location { get; init; }
     public string? SalaryRaw { get; init; }
+    public long? SalaryMin { get; init; }
+    public long? SalaryMax { get; init; }
+    public string? SalaryCurrency { get; init; }
     public string? Skills { get; init; }
     public string? Url { get; init; }
     public DateTimeOffset? PublishedAt { get; init; }

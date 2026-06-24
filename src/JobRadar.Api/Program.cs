@@ -8,11 +8,14 @@ using JobRadar.Api.Ingestion;
 using JobRadar.Api;
 using JobRadar.Application.Applications;
 using JobRadar.Application.Auth;
+using JobRadar.Application.Employer;
 using JobRadar.Application.Ingestion;
 using JobRadar.Application.SavedFilters;
 using JobRadar.Application.Vacancies;
+using JobRadar.Domain.Entities;
 using JobRadar.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 
@@ -124,6 +127,7 @@ auth.MapGet("/me", (ClaimsPrincipal user) => Results.Ok(new
 {
     id = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("sub"),
     email = user.FindFirstValue(ClaimTypes.Email) ?? user.FindFirstValue("email"),
+    role = user.FindFirstValue(ClaimTypes.Role),
 })).RequireAuthorization();
 
 app.MapGet("/vacancies", async (
@@ -235,6 +239,43 @@ applications.MapDelete("/{id:int}", async (int id, IApplicationService service, 
     var userId = user.GetUserId();
     if (userId is null) return Results.Unauthorized();
     return await service.DeleteAsync(userId.Value, id, ct) ? Results.NoContent() : Results.NotFound();
+});
+
+var employer = app.MapGroup("/employer")
+    .RequireAuthorization(policy => policy.RequireRole(nameof(UserRole.Employer)));
+
+employer.MapPost("/vacancies", async (CreateVacancyRequest request, IEmployerService service, ClaimsPrincipal user, CancellationToken ct) =>
+{
+    var userId = user.GetUserId();
+    if (userId is null) return Results.Unauthorized();
+    if (RequestValidation.ForEmployerVacancy(request) is { } problem) return problem;
+    var created = await service.PostVacancyAsync(userId.Value, request, ct);
+    return Results.Created($"/vacancies/{created.Id}", created);
+});
+
+employer.MapGet("/applications", async (IEmployerService service, ClaimsPrincipal user, CancellationToken ct) =>
+{
+    var userId = user.GetUserId();
+    return userId is null ? Results.Unauthorized() : Results.Ok(await service.ListApplicationsAsync(userId.Value, ct));
+});
+
+employer.MapPatch("/applications/{id:int}/status", async (
+    int id, UpdateApplicationStatusRequest request, IEmployerService service,
+    IHubContext<VacancyHub> hub, ClaimsPrincipal user, CancellationToken ct) =>
+{
+    var userId = user.GetUserId();
+    if (userId is null) return Results.Unauthorized();
+    var outcome = await service.ChangeApplicationStatusAsync(userId.Value, id, request, ct);
+    // Решение работодателя прилетает кандидату в реальном времени (его персональный канал).
+    if (outcome.Result == StatusChangeResult.Changed && outcome.CandidateUserId is { } candidateId)
+        await hub.Clients.User(candidateId.ToString()).SendAsync("ApplicationStatusChanged", outcome.Application, ct);
+    return outcome.Result switch
+    {
+        StatusChangeResult.Changed => Results.Ok(outcome.Application),
+        StatusChangeResult.NotFound => Results.NotFound(),
+        StatusChangeResult.IllegalTransition => Results.UnprocessableEntity(new { error = "illegal_transition" }),
+        _ => Results.Conflict(new { error = "version_conflict" }),
+    };
 });
 
 app.MapHub<VacancyHub>("/hubs/vacancies");

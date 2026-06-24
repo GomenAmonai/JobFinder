@@ -37,6 +37,10 @@ public sealed class AuthService(
             Id = Guid.NewGuid(),
             Email = email,
             DisplayName = string.IsNullOrWhiteSpace(request.DisplayName) ? null : request.DisplayName.Trim(),
+            // Роль берётся из запроса осознанно: self-service регистрация работодателя без
+            // верификации (демо). Если у Employer появятся привилегии вне своих вакансий
+            // (биллинг, модерация) — роль нужно будет выдавать через отдельный проверенный путь.
+            Role = request.Role,
             CreatedAt = clock.GetUtcNow(),
         };
         user.PasswordHash = passwordHasher.HashPassword(user, request.Password);
@@ -90,12 +94,16 @@ public sealed class AuthService(
         var now = clock.GetUtcNow();
         var accessExpires = now.AddMinutes(_jwt.AccessTokenMinutes);
 
+        // sub → ClaimTypes.NameIdentifier по дефолтному inbound-маппингу JwtBearer; на этом
+        // держится и SignalR Clients.User(userId), и GetUserId(). Role → ClaimTypes.Role для RequireRole.
+        // Если когда-то выключим MapInboundClaims — нужен явный IUserIdProvider по sub.
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new Claim("name", user.DisplayName ?? user.Email),
+            new Claim(ClaimTypes.Role, user.Role.ToString()),
         };
 
         var credentials = new SigningCredentials(

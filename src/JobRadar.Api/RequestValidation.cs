@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using JobRadar.Application.Auth;
+using JobRadar.Application.Employer;
 
 namespace JobRadar.Api;
 
@@ -53,4 +54,23 @@ internal static class RequestValidation
         => coverLetter is { Length: > 5000 }
             ? Results.ValidationProblem(new Dictionary<string, string[]> { ["coverLetter"] = ["At most 5000 characters."] })
             : null;
+
+    public static IResult? ForEmployerVacancy(CreateVacancyRequest r)
+    {
+        var errors = new Dictionary<string, string[]>();
+        if (string.IsNullOrWhiteSpace(r.Title) || r.Title.Trim().Length > 500)
+            errors["title"] = ["Title is required and must be at most 500 characters."];
+        if (r.Company is { Length: > 300 }) errors["company"] = ["At most 300 characters."];
+        if (r.Location is { Length: > 200 }) errors["location"] = ["At most 200 characters."];
+        if (r.SalaryRaw is { Length: > 100 }) errors["salaryRaw"] = ["At most 100 characters."];
+        if (r.Skills is { Length: > 500 }) errors["skills"] = ["At most 500 characters."];
+        // Только http(s): иначе сохранённый javascript:-URL стал бы stored XSS при рендере ссылки.
+        if (r.Url is { Length: > 0 } url && (url.Length > 1000 || !IsHttpUrl(url)))
+            errors["url"] = ["Must be an absolute http(s) URL of at most 1000 characters."];
+        return errors.Count > 0 ? Results.ValidationProblem(errors) : null;
+    }
+
+    private static bool IsHttpUrl(string value)
+        => Uri.TryCreate(value, UriKind.Absolute, out var uri)
+            && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 }

@@ -31,10 +31,14 @@ public class Vacancy
     public string? Url { get; set; }
     public DateTimeOffset? PublishedAt { get; set; }
 
+    // Ключ кросс-источниковой дедупликации (нормализованные компания+должность);
+    // null, если компании нет. Read API показывает по одной канонической вакансии на ключ.
+    public string? DedupKey { get; set; }
+
     public DateTimeOffset FirstSeen { get; set; }
     public DateTimeOffset LastSeen { get; set; }
 
-    // NOTE: задел под нативные вакансии работодателей (Phase «посредник»):
-    // у агрегированных вакансий null, у запощенных на JobRadar — Id работодателя.
+    // Автор нативной вакансии: null у агрегированных (с внешних бордов), Id работодателя
+    // у запощенных на JobRadar. Определяет, кто двигает статусы откликов (см. EmployerService).
     public Guid? PostedByUserId { get; set; }
 }

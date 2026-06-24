@@ -16,6 +16,15 @@ public sealed class VacancyQueryService(JobRadarDbContext db) : IVacancyQuerySer
 
         var filtered = db.Vacancies.AsNoTracking();
 
+        // Сворачиваем кросс-источниковые дубли: на каждый непустой ключ дедупликации
+        // показываем каноническую (минимальный Id = первая увиденная) вакансию;
+        // записи без ключа проходят как есть. Канон считается по всей таблице, не по фильтру.
+        var canonicalIds = db.Vacancies
+            .Where(v => v.DedupKey != null)
+            .GroupBy(v => v.DedupKey)
+            .Select(g => g.Min(x => x.Id));
+        filtered = filtered.Where(v => v.DedupKey == null || canonicalIds.Contains(v.Id));
+
         if (!string.IsNullOrWhiteSpace(query.Market))
             filtered = filtered.Where(v => v.Market == query.Market);
         if (!string.IsNullOrWhiteSpace(query.Level))
@@ -59,6 +68,9 @@ public sealed class VacancyQueryService(JobRadarDbContext db) : IVacancyQuerySer
                 Stack = v.Stack,
                 Location = v.Location,
                 SalaryRaw = v.SalaryRaw,
+                SalaryMin = v.SalaryMin,
+                SalaryMax = v.SalaryMax,
+                SalaryCurrency = v.SalaryCurrency,
                 Skills = v.Skills,
                 Url = v.Url,
                 PublishedAt = v.PublishedAt,

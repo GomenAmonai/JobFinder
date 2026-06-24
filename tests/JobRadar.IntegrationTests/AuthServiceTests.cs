@@ -118,4 +118,15 @@ public sealed class AuthServiceTests : IAsyncLifetime
         var reused = await NewService(db).RefreshAsync("deadbeef");
         reused.Error.Should().Be(AuthError.InvalidRefreshToken);
     }
+
+    [Fact]
+    public async Task Register_persists_the_requested_role()
+    {
+        await using var db = new JobRadarDbContext(_options);
+        await NewService(db).RegisterAsync(new RegisterRequest("emp@x.com", "P@ssw0rd!", null, UserRole.Employer));
+
+        var stored = await db.Users.SingleAsync(u => u.Email == "emp@x.com");
+
+        stored.Role.Should().Be(UserRole.Employer);
+    }
 }

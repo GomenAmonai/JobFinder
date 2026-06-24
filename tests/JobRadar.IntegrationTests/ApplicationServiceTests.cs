@@ -114,6 +114,19 @@ public sealed class ApplicationServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Candidate_can_advance_status_on_an_aggregated_vacancy()
+    {
+        await using var db = new JobRadarDbContext(_options);
+        var service = NewService(db);
+        var created = await service.ApplyAsync(_userId, _vacancyId, new CreateApplicationRequest(null));
+
+        var outcome = await service.ChangeStatusAsync(_userId, created.Application!.Id,
+            new UpdateApplicationStatusRequest(ApplicationStatus.UnderReview, created.Application.Version));
+
+        outcome.Result.Should().Be(StatusChangeResult.Changed);
+    }
+
+    [Fact]
     public async Task Illegal_status_change_is_rejected()
     {
         await using var db = new JobRadarDbContext(_options);

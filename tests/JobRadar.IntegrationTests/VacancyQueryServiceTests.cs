@@ -68,6 +68,22 @@ public sealed class VacancyQueryServiceTests : IAsyncLifetime
         result.TotalPages.Should().Be(2);
     }
 
+    [Fact]
+    public async Task Collapses_cross_source_duplicates_to_one()
+    {
+        await using (var seed = new JobRadarDbContext(_options))
+        {
+            seed.Vacancies.AddRange(
+                MakeWithKey("r1", "remotive", "Dedup Target Engineer", "acme|dedup target engineer"),
+                MakeWithKey("o1", "remoteok", "Dedup Target Engineer", "acme|dedup target engineer"));
+            await seed.SaveChangesAsync();
+        }
+
+        var result = await Search(new VacancyQuery { Q = "Dedup Target" });
+
+        result.Total.Should().Be(1);
+    }
+
     private async Task<PagedResult<VacancyDto>> Search(VacancyQuery query)
     {
         await using var db = new JobRadarDbContext(_options);
@@ -88,5 +104,16 @@ public sealed class VacancyQueryServiceTests : IAsyncLifetime
             PublishedAt = published,
             FirstSeen = published,
             LastSeen = published,
+        };
+
+    private static Vacancy MakeWithKey(string id, string source, string title, string dedupKey)
+        => new()
+        {
+            Source = source,
+            ExternalId = id,
+            Title = title,
+            DedupKey = dedupKey,
+            FirstSeen = Day(20),
+            LastSeen = Day(20),
         };
 }

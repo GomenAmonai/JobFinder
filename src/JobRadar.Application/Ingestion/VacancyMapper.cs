@@ -13,6 +13,7 @@ public static class VacancyMapper
     public static Vacancy ToVacancy(RawVacancyMessage m)
     {
         var classifyText = $"{m.Title} {m.Skills}";
+        var salary = SalaryParser.Parse(m.SalaryRaw);
         return new Vacancy
         {
             Source = m.Source,
@@ -24,11 +25,15 @@ public static class VacancyMapper
             Level = VacancyNormalization.GuessLevel(classifyText),
             Stack = VacancyNormalization.DetectStack(classifyText),
             SalaryRaw = m.SalaryRaw,
+            SalaryMin = salary.Min,
+            SalaryMax = salary.Max,
+            SalaryCurrency = salary.Currency,
             Skills = m.Skills,
             Url = m.Url,
             // Postgres timestamptz принимает только UTC (offset 0); источники часто
             // отдают дату с локальным смещением — приводим к UTC на границе нормализации.
             PublishedAt = m.PublishedAt?.ToUniversalTime(),
+            DedupKey = DedupKeyBuilder.Build(m.Company, m.Title),
         };
     }
 }
