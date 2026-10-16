@@ -21,6 +21,7 @@ body {
   color: var(--color-text);
   background: var(--color-bg);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   font-variant-numeric: tabular-nums;
 }
 
@@ -50,8 +51,8 @@ textarea {
 }
 
 ::selection {
-  background: var(--color-highlight);
-  color: var(--color-on-highlight);
+  background: var(--color-accent-soft);
+  color: var(--color-text-strong);
 }
 
 @media (prefers-reduced-motion: reduce) {

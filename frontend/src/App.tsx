@@ -100,11 +100,20 @@ export function App() {
         onViewChange={setView}
         onSignIn={() => setAuthOpen(true)}
       />
-      {DEMO_MODE && <DemoBanner />}
 
       <main className="app-main">
+        {DEMO_MODE && <DemoBanner />}
+
         {view === 'browse' && (
           <>
+            <div className="page-head">
+              <h1 className="page-head__title">Remote .NET &amp; backend jobs</h1>
+              <p className="page-head__text">
+                Collected from Remotive, RemoteOK and direct employer posts. New listings appear as they
+                are ingested.
+              </p>
+            </div>
+
             <FilterBar value={filters} onChange={handleFiltersChange} />
             {isAuthenticated && <SavedFilters current={filters} onApply={handleFiltersChange} />}
 
@@ -153,16 +162,25 @@ export function App() {
         )}
 
         {view === 'applications' && (
-          <section className="card section-pad">
-            <h1 className="section-title">My applications</h1>
-            <ApplicationsBoard />
-          </section>
+          <>
+            <div className="page-head">
+              <h1 className="page-head__title">Applications</h1>
+              <p className="page-head__text">Every vacancy you applied to, with its current stage.</p>
+            </div>
+            <section className="card section-pad">
+              <ApplicationsBoard />
+            </section>
+          </>
         )}
 
         {view === 'employer' && (
-          <div className="view">
+          <>
+            <div className="page-head">
+              <h1 className="page-head__title">Employer</h1>
+              <p className="page-head__text">Post vacancies and move candidates through your pipeline.</p>
+            </div>
             <EmployerPanel />
-          </div>
+          </>
         )}
       </main>
 

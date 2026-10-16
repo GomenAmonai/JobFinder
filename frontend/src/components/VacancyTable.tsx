@@ -3,7 +3,7 @@ import { VacancyRow } from './VacancyRow';
 
 import type { VacancyDto } from '../types/vacancy';
 
-const COLUMNS = ['Date', 'Position', 'Level', 'Market', 'Stack', 'Salary', 'Skills', 'Source'] as const;
+const COLUMNS = ['Position', 'Level', 'Market', 'Salary', 'Skills', 'Source', 'Posted'] as const;
 
 interface VacancyTableProps {
   vacancies: VacancyDto[];
