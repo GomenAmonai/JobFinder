@@ -1,13 +1,42 @@
 # JobRadar
 
-Полноценная платформа поиска работы для remote .NET / backend / full-stack ролей:
-агрегатор вакансий с нескольких бордов **+** трекер откликов кандидата **+**
-сторона работодателя (нативные вакансии и управление откликами) — с авторизацией
-и обновлениями в реальном времени.
+[![CI](https://github.com/GomenAmonai/JobFinder/actions/workflows/ci.yml/badge.svg)](https://github.com/GomenAmonai/JobFinder/actions/workflows/ci.yml)
+![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)
+![Kafka](https://img.shields.io/badge/Kafka-KRaft-231F20?logo=apachekafka&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
+![React](https://img.shields.io/badge/React-18-149ECA?logo=react&logoColor=white)
+
+Агрегатор remote-вакансий для .NET / backend-разработчиков **+** трекер откликов
+кандидата **+** кабинет работодателя, с обновлениями в реальном времени.
+Коллекторы → Kafka → идемпотентный .NET-воркер → PostgreSQL → REST + SignalR → React.
+
+**[▶ Live demo](https://job-finder-eight-cyan.vercel.app)**: работает без бэкенда, API
+эмулируется прямо в браузере. Вход демо-кандидатом или демо-работодателем в один клик.
+Полный стек поднимается локально через `docker compose up` ([Запуск](#запуск)).
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/feed-dark.png">
+  <img alt="JobRadar: лента вакансий с фильтрами и live-уведомлением о новой вакансии" src="docs/screenshots/feed-light.png">
+</picture>
+
+### На что посмотреть
+
+- **Идемпотентный приём под конкуренцией.** 50 параллельных писателей дают 1 строку и
+  ровно 1 INSERT: update-first upsert + уникальный индекс + повтор на `23505`
+  ([тест](tests/JobRadar.IntegrationTests/VacancyUpsertConcurrencyTests.cs)).
+- **Event-driven, разные процессы.** Worker и API связаны только через Kafka
+  (`vacancies.changed`), live-лента доходит до браузера по SignalR, битые сообщения
+  уходят в dead-letter топик.
+- **Безопасность.** Ротация refresh-токенов с инвалидацией всей цепочки при reuse
+  (RFC 9700), скоупинг по пользователю (нет IDOR), rate limiting, проверка по
+  OWASP API Security Top 10.
+- **Optimistic concurrency** на системном столбце `xmin`: устаревшая версия даёт `409`,
+  а не тихую перезапись.
+- **79 тестов в CI:** 27 unit + 52 integration на реальном PostgreSQL (Testcontainers).
 
 **Стек:** .NET 10 · ASP.NET Core (Minimal API + SignalR) · EF Core 10 + PostgreSQL ·
 Kafka (Confluent.Kafka, KRaft) · OpenTelemetry · Clean Architecture · React + Vite +
-TypeScript + TanStack Query · Docker Compose · xUnit + Testcontainers.
+TypeScript + TanStack Query · Docker Compose · xUnit + Testcontainers · GitHub Actions.
 
 ---
 
@@ -98,7 +127,6 @@ Worker и Api — **разные процессы**, поэтому live-обн�
 `MatchedVacancy` (таргетированно — новая вакансия под сохранённым фильтром),
 `ApplicationStatusChanged` (таргетированно — работодатель сменил статус отклика).
 
-
 ## Безопасность и прод-готовность
 
 - **JWT** (HS256): валидация issuer/audience/lifetime/подписи; refresh-токены опаковые,
@@ -161,6 +189,9 @@ dotnet test tests/JobRadar.UnitTests          # быстрые, без Docker (2
 dotnet test tests/JobRadar.IntegrationTests   # Testcontainers, нужен Docker (52)
 ```
 
+Оба набора и сборка фронта (`tsc` + `vite build`) гоняются в GitHub Actions на каждый
+push и PR: [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+
 - **Unit (27):** чистая доменная/прикладная логика — нормализация, парсинг зарплат,
   dedup-ключ, релевантность, state-machine статусов, маппинг.
 - **Integration (52):** реальный Postgres через Testcontainers — идемпотентный upsert
@@ -173,5 +204,23 @@ dotnet test tests/JobRadar.IntegrationTests   # Testcontainers, нужен Docke
 SPA на React + Vite + TS: публичная лента с фильтрами, авторизация (login/register),
 сохранённые фильтры, отклик + доска статусов, сторона работодателя, live через SignalR.
 Данные — TanStack Query (кэш, инвалидация по SignalR), доступ к API — типизированный
-клиент с авто-refresh токена. Дизайн (тёмная тема, токены, Geist)
-вынесен в отдельный слой стилей в `frontend/src/styles/`.
+клиент с авто-refresh токена. Стили на чистом CSS без UI-библиотек: дизайн-токены
+в `frontend/src/styles/tokens.css` (светлая и тёмная схема по настройке ОС), плотная
+таблица вакансий, которая на узких экранах складывается в карточки.
+
+### Демо-режим
+
+Чтобы статический деплой фронта не показывал пустой экран без API, есть демо-режим:
+[`frontend/src/api/demo/server.ts`](frontend/src/api/demo/server.ts) отвечает на те же
+маршруты, что и настоящий API (коды ответов, версии для `409`, state-machine откликов,
+роль `Employer`), а состояние хранит в `localStorage`. Симулированный воркер раз в
+~25 секунд «находит» вакансию и шлёт те же события, что SignalR-хаб (`VacancyChanged`,
+`MatchedVacancy`, `ApplicationStatusChanged`). Код компонентов не знает, в каком режиме
+он работает: подменяется только транспорт в `api/http.ts`.
+
+| Сборка | Режим |
+|---|---|
+| `npm run dev` | реальный API на `VITE_API_URL` (по умолчанию `http://localhost:5088`) |
+| `npm run build` с `VITE_API_URL` | реальный API |
+| `npm run build` без `VITE_API_URL` | демо (так собирается Vercel-деплой) |
+| `VITE_DEMO_MODE=true` / `false` | принудительно включить / выключить |

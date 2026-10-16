@@ -1,3 +1,5 @@
+import { marketLabel } from '../types/markets';
+
 type LevelBucket = 'junior' | 'middle' | 'senior' | 'unknown';
 
 function classifyLevel(level: string | null): LevelBucket {
@@ -16,7 +18,7 @@ function classifyLevel(level: string | null): LevelBucket {
 
 export function MarketBadge({ market }: { market: string | null }) {
   if (!market) return <span className="cell-muted">—</span>;
-  return <span className="badge badge--market">{market}</span>;
+  return <span className="badge badge--market">{marketLabel(market)}</span>;
 }
 
 export function LevelBadge({ level }: { level: string | null }) {

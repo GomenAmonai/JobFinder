@@ -1,6 +1,6 @@
 import { useAuth } from '../hooks/use-auth';
 import { ConnectionIndicator } from './ConnectionIndicator';
-import { LogOutIcon, RadarIcon, UserIcon } from './icons';
+import { LogOutIcon, RadarIcon } from './icons';
 
 import type { StreamStatus } from '../hooks/use-vacancy-stream';
 
@@ -17,30 +17,25 @@ export function Header({ connectionStatus, view, onViewChange, onSignIn }: Heade
   const { user, isAuthenticated, isEmployer, logout } = useAuth();
 
   const tabs: { id: AppView; label: string; show: boolean }[] = [
-    { id: 'browse', label: 'Browse', show: true },
-    { id: 'applications', label: 'My applications', show: isAuthenticated },
+    { id: 'browse', label: 'Vacancies', show: true },
+    { id: 'applications', label: 'Applications', show: isAuthenticated },
     { id: 'employer', label: 'Employer', show: isEmployer },
   ];
+  const visibleTabs = tabs.filter((tab) => tab.show);
 
   return (
     <header className="header">
       <div className="header__inner">
         <div className="header__brand">
-          <span className="header__logo">
-            <RadarIcon />
+          <span className="header__logo" aria-hidden="true">
+            <RadarIcon size={16} />
           </span>
-          <div>
-            <div className="header__title">
-              JobRadar <span className="header__title-accent">— remote .NET / backend</span>
-            </div>
-            <div className="header__subtitle">live aggregator</div>
-          </div>
+          <span className="header__title">JobRadar</span>
         </div>
 
-        <nav className="nav" aria-label="Sections">
-          {tabs
-            .filter((tab) => tab.show)
-            .map((tab) => (
+        {visibleTabs.length > 1 && (
+          <nav className="nav" aria-label="Sections">
+            {visibleTabs.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
@@ -51,21 +46,24 @@ export function Header({ connectionStatus, view, onViewChange, onSignIn }: Heade
                 {tab.label}
               </button>
             ))}
-        </nav>
+          </nav>
+        )}
 
         <div className="header__right">
           <ConnectionIndicator status={connectionStatus} />
           {isAuthenticated ? (
             <div className="user-chip">
-              <UserIcon />
+              <span className="user-chip__avatar" aria-hidden="true">
+                {user?.email.charAt(0).toUpperCase()}
+              </span>
               <span className="user-chip__email">{user?.email}</span>
-              {isEmployer && <span className="user-chip__role">employer</span>}
+              {isEmployer && <span className="user-chip__role">Employer</span>}
               <button type="button" className="icon-button" aria-label="Sign out" onClick={logout}>
                 <LogOutIcon />
               </button>
             </div>
           ) : (
-            <button type="button" className="page-button" onClick={onSignIn}>
+            <button type="button" className="button-primary button-primary--sm" onClick={onSignIn}>
               Sign in
             </button>
           )}

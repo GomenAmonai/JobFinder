@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (.NET build + tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore JobRadar.sln
+
+      - name: Build
+        run: dotnet build JobRadar.sln --configuration Release --no-restore
+
+      - name: Unit tests
+        run: >
+          dotnet test tests/JobRadar.UnitTests --configuration Release --no-build
+          --logger "trx;LogFileName=unit.trx" --results-directory TestResults
+
+      # Testcontainers starts a throwaway PostgreSQL on the runner's Docker daemon.
+      - name: Integration tests
+        run: >
+          dotnet test tests/JobRadar.IntegrationTests --configuration Release --no-build
+          --logger "trx;LogFileName=integration.trx" --results-directory TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults/*.trx
+
+  frontend:
+    name: Frontend (typecheck + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+
+      # `build` runs `tsc -b` first, so type errors fail the job. With no
+      # VITE_API_URL set this is the demo-mode bundle that ships to Vercel.
+      - run: npm run build

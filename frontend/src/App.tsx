@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { DEMO_MODE, REPOSITORY_URL } from './api/config';
 import { ApiError } from './api/http';
 import { ApplicationsBoard } from './components/ApplicationsBoard';
 import { ApplyDialog } from './components/ApplyDialog';
 import { AuthDialog } from './components/AuthDialog';
+import { DemoBanner } from './components/DemoBanner';
 import { EmployerPanel } from './components/EmployerPanel';
 import { FilterBar } from './components/FilterBar';
 import { Header } from './components/Header';
@@ -100,12 +102,22 @@ export function App() {
       />
 
       <main className="app-main">
+        {DEMO_MODE && <DemoBanner />}
+
         {view === 'browse' && (
           <>
+            <div className="page-head">
+              <h1 className="page-head__title">Remote .NET &amp; backend jobs</h1>
+              <p className="page-head__text">
+                Collected from Remotive, RemoteOK and direct employer posts. New listings appear as they
+                are ingested.
+              </p>
+            </div>
+
             <FilterBar value={filters} onChange={handleFiltersChange} />
             {isAuthenticated && <SavedFilters current={filters} onApply={handleFiltersChange} />}
 
-            <div className="results-bar reveal">
+            <div className="results-bar">
               <span className="results-bar__count">
                 {isInitialLoading ? (
                   'Loading vacancies…'
@@ -124,16 +136,16 @@ export function App() {
             </div>
 
             {showErrorPanel ? (
-              <section className="card reveal">
+              <section className="card">
                 <ErrorState message={toErrorMessage(error)} onRetry={() => void refetch()} />
               </section>
             ) : isEmpty ? (
-              <section className="card reveal">
+              <section className="card">
                 <EmptyState />
               </section>
             ) : (
               <>
-                <section className="card reveal">
+                <section className="card">
                   <VacancyTable
                     vacancies={items}
                     isLoading={isInitialLoading}
@@ -150,20 +162,36 @@ export function App() {
         )}
 
         {view === 'applications' && (
-          <section className="card reveal section-pad">
-            <h1 className="section-title">My applications</h1>
-            <ApplicationsBoard />
-          </section>
+          <>
+            <div className="page-head">
+              <h1 className="page-head__title">Applications</h1>
+              <p className="page-head__text">Every vacancy you applied to, with its current stage.</p>
+            </div>
+            <section className="card section-pad">
+              <ApplicationsBoard />
+            </section>
+          </>
         )}
 
         {view === 'employer' && (
-          <div className="reveal">
+          <>
+            <div className="page-head">
+              <h1 className="page-head__title">Employer</h1>
+              <p className="page-head__text">Post vacancies and move candidates through your pipeline.</p>
+            </div>
             <EmployerPanel />
-          </div>
+          </>
         )}
       </main>
 
-      <footer className="footer">JobRadar · aggregating remote .NET &amp; backend roles</footer>
+      <footer className="footer">
+        <div className="footer__inner">
+          <span>JobRadar, a portfolio project by Daniil Khripunov</span>
+          <a className="footer__link" href={REPOSITORY_URL} target="_blank" rel="noopener noreferrer">
+            Source on GitHub
+          </a>
+        </div>
+      </footer>
 
       {authOpen && <AuthDialog onClose={() => setAuthOpen(false)} />}
       {applyTarget && <ApplyDialog vacancy={applyTarget} onClose={() => setApplyTarget(null)} />}

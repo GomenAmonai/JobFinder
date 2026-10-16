@@ -1,10 +1,10 @@
-import { formatPublishedDate, splitSkills } from '../api/format';
+import { formatShortDate, splitSkills } from '../api/format';
 import { LevelBadge, MarketBadge, StackBadge } from './Badges';
 import { CheckIcon, ExternalLinkIcon } from './icons';
 
 import type { VacancyDto } from '../types/vacancy';
 
-const MAX_VISIBLE_SKILLS = 6;
+const MAX_VISIBLE_SKILLS = 3;
 
 interface VacancyRowProps {
   vacancy: VacancyDto;
@@ -15,50 +15,35 @@ interface VacancyRowProps {
 export function VacancyRow({ vacancy, applied, onApply }: VacancyRowProps) {
   const skills = splitSkills(vacancy.skills);
   const visibleSkills = skills.slice(0, MAX_VISIBLE_SKILLS);
-  const overflowCount = skills.length - visibleSkills.length;
+  const hiddenCount = skills.length - visibleSkills.length;
+  const subline = [vacancy.company, vacancy.location].filter(Boolean).join(' · ');
 
   return (
     <tr>
-      <td>
-        <span className="cell-source">{vacancy.source}</span>
-      </td>
-      <td>
-        <MarketBadge market={vacancy.market} />
-      </td>
-      <td>
-        <LevelBadge level={vacancy.level} />
-      </td>
-      <td>
-        <StackBadge stack={vacancy.stack} />
-      </td>
-      <td>
+      <td className="cell-position">
         {vacancy.url ? (
-          <a
-            className="cell-title"
-            href={vacancy.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            title={vacancy.title}
-          >
+          <a className="cell-title" href={vacancy.url} target="_blank" rel="noopener noreferrer">
             {vacancy.title}
             <ExternalLinkIcon className="cell-title__ext" />
           </a>
         ) : (
-          <span className="cell-title cell-title--plain" title={vacancy.title}>
-            {vacancy.title}
-          </span>
+          <span className="cell-title">{vacancy.title}</span>
         )}
+        <div className="cell-sub">
+          <StackBadge stack={vacancy.stack} />
+          {subline && <span>{subline}</span>}
+        </div>
       </td>
       <td>
-        <span className="cell-company">{vacancy.company ?? '—'}</span>
+        <LevelBadge level={vacancy.level} />
       </td>
-      <td>
-        <span className="cell-muted">{vacancy.location ?? '—'}</span>
+      <td className="cell-market">
+        <MarketBadge market={vacancy.market} />
       </td>
-      <td>
-        <span className="cell-muted">{vacancy.salaryRaw ?? '—'}</span>
+      <td className="cell-salary">
+        {vacancy.salaryRaw ?? <span className="cell-muted">Not stated</span>}
       </td>
-      <td>
+      <td className="cell-skills" title={skills.join(', ') || undefined}>
         {visibleSkills.length > 0 ? (
           <div className="skills">
             {visibleSkills.map((skill) => (
@@ -66,20 +51,19 @@ export function VacancyRow({ vacancy, applied, onApply }: VacancyRowProps) {
                 {skill}
               </span>
             ))}
-            {overflowCount > 0 && <span className="skill-tag">+{overflowCount}</span>}
+            {hiddenCount > 0 && <span className="skill-tag skill-tag--more">+{hiddenCount}</span>}
           </div>
         ) : (
           <span className="cell-muted">—</span>
         )}
       </td>
-      <td>
-        <span className="cell-mono">{formatPublishedDate(vacancy.publishedAt)}</span>
-      </td>
+      <td className="cell-source">{vacancy.source}</td>
+      <td className="cell-date">{formatShortDate(vacancy.publishedAt)}</td>
       {onApply && (
-        <td>
+        <td className="cell-action">
           {applied ? (
             <span className="applied-tag">
-              <CheckIcon size={13} /> Applied
+              <CheckIcon size={12} /> Applied
             </span>
           ) : (
             <button type="button" className="apply-button" onClick={() => onApply(vacancy)}>
