@@ -3,18 +3,7 @@ import { VacancyRow } from './VacancyRow';
 
 import type { VacancyDto } from '../types/vacancy';
 
-const COLUMNS = [
-  'Source',
-  'Market',
-  'Level',
-  'Stack',
-  'Title',
-  'Company',
-  'Location',
-  'Salary',
-  'Skills',
-  'Published',
-] as const;
+const COLUMNS = ['Date', 'Position', 'Level', 'Market', 'Stack', 'Salary', 'Skills', 'Source'] as const;
 
 interface VacancyTableProps {
   vacancies: VacancyDto[];
@@ -33,7 +22,7 @@ export function VacancyTable({ vacancies, isLoading, appliedVacancyIds, onApply 
         <thead>
           <tr>
             {COLUMNS.map((column) => (
-              <th key={column} scope="col">
+              <th key={column} scope="col" className={`col-${column.toLowerCase()}`}>
                 {column}
               </th>
             ))}

@@ -6,7 +6,8 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
-import { VACANCIES_HUB_URL } from '../api/config';
+import { DEMO_MODE, VACANCIES_HUB_URL } from '../api/config';
+import { subscribeDemoEvents } from '../api/demo/server';
 import { getTokens } from '../api/token-store';
 import { APPLICATIONS_QUERY_KEY } from './use-applications';
 import { useAuth } from './use-auth';
@@ -14,6 +15,7 @@ import { useToasts } from './use-toasts';
 import { VACANCIES_QUERY_KEY } from './use-vacancies';
 
 import { STATUS_LABELS } from '../types/applications';
+import { marketLabel } from '../types/markets';
 import type { ApplicationDto } from '../types/applications';
 import type { VacancyChangedPayload } from '../types/vacancy';
 
@@ -37,16 +39,6 @@ export function useVacancyStream(): StreamStatus {
   const userId = user?.id ?? null;
 
   useEffect(() => {
-    const connection = new HubConnectionBuilder()
-      // SignalR sends the token as ?access_token=; the API only honors it on /hubs.
-      .withUrl(VACANCIES_HUB_URL, { accessTokenFactory: () => getTokens()?.accessToken ?? '' })
-      .withAutomaticReconnect()
-      .configureLogging(LogLevel.Warning)
-      .build();
-
-    let isActive = true;
-    let startPromise: Promise<void> | null = null;
-    let retryHandle: number | null = null;
     let invalidateHandle: number | null = null;
 
     // Bursts from the ingestion worker can fire many events in quick succession;
@@ -59,7 +51,7 @@ export function useVacancyStream(): StreamStatus {
       }, INVALIDATE_DEBOUNCE_MS);
     };
 
-    connection.on(VACANCY_CHANGED_EVENT, (payload: VacancyChangedPayload) => {
+    const onVacancyChanged = (payload: VacancyChangedPayload) => {
       scheduleInvalidate();
       const description = [payload.company, payload.source].filter(Boolean).join(' · ');
       if (payload.outcome === 'Inserted') {
@@ -67,27 +59,60 @@ export function useVacancyStream(): StreamStatus {
       } else {
         pushToast({ variant: 'updated', title: `Updated: ${payload.title}`, description });
       }
-    });
+    };
 
     // Targeted: a freshly-inserted vacancy matched one of this user's saved filters.
-    connection.on(MATCHED_VACANCY_EVENT, (payload: VacancyChangedPayload) => {
+    const onMatchedVacancy = (payload: VacancyChangedPayload) => {
       scheduleInvalidate();
       pushToast({
         variant: 'inserted',
         title: `Matches your filter: ${payload.title}`,
-        description: [payload.company, payload.market].filter(Boolean).join(' · '),
+        description: [payload.company, payload.market && marketLabel(payload.market)]
+          .filter(Boolean)
+          .join(' · '),
       });
-    });
+    };
 
     // Targeted: an employer moved this user's application to a new stage.
-    connection.on(APPLICATION_STATUS_EVENT, (payload: ApplicationDto) => {
+    const onApplicationStatus = (payload: ApplicationDto) => {
       void queryClient.invalidateQueries({ queryKey: [APPLICATIONS_QUERY_KEY] });
       pushToast({
         variant: 'updated',
         title: `Application: ${STATUS_LABELS[payload.status]}`,
         description: payload.vacancy.title,
       });
-    });
+    };
+
+    // Demo mode: the in-browser mock API plays the hub's role. Targeted events are
+    // delivered only to the signed-in user, as the real hub does with per-user groups.
+    if (DEMO_MODE) {
+      setStatus('connected');
+      const unsubscribe = subscribeDemoEvents((event) => {
+        if (event.type === 'VacancyChanged') onVacancyChanged(event.payload);
+        else if (event.userId !== userId) return;
+        else if (event.type === 'MatchedVacancy') onMatchedVacancy(event.payload);
+        else onApplicationStatus(event.payload);
+      });
+      return () => {
+        if (invalidateHandle !== null) window.clearTimeout(invalidateHandle);
+        unsubscribe();
+      };
+    }
+
+    const connection = new HubConnectionBuilder()
+      // SignalR sends the token as ?access_token=; the API only honors it on /hubs.
+      .withUrl(VACANCIES_HUB_URL, { accessTokenFactory: () => getTokens()?.accessToken ?? '' })
+      .withAutomaticReconnect()
+      .configureLogging(LogLevel.Warning)
+      .build();
+
+    let isActive = true;
+    let startPromise: Promise<void> | null = null;
+    let retryHandle: number | null = null;
+
+    connection.on(VACANCY_CHANGED_EVENT, onVacancyChanged);
+    connection.on(MATCHED_VACANCY_EVENT, onMatchedVacancy);
+    connection.on(APPLICATION_STATUS_EVENT, onApplicationStatus);
 
     connection.onreconnecting(() => {
       if (isActive) setStatus('reconnecting');

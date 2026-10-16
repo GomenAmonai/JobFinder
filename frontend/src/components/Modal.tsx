@@ -22,7 +22,7 @@ export function Modal({ title, onClose, children }: ModalProps) {
   return (
     <div className="modal-backdrop" role="presentation" onClick={onClose}>
       <div
-        className="modal reveal"
+        className="modal"
         role="dialog"
         aria-modal="true"
         aria-label={title}

@@ -1,5 +1,7 @@
 import { useState } from 'react';
 
+import { DEMO_MODE } from '../api/config';
+import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '../api/demo/server';
 import { ApiError } from '../api/http';
 import { useAuth } from '../hooks/use-auth';
 import { Modal } from './Modal';
@@ -46,8 +48,41 @@ export function AuthDialog({ onClose }: { onClose: () => void }) {
     }
   };
 
+  const signInAsDemo = async (demoRole: UserRole) => {
+    setError(null);
+    setPending(true);
+    try {
+      await login({ email: DEMO_ACCOUNTS[demoRole], password: DEMO_PASSWORD });
+      onClose();
+    } catch (err) {
+      setError(describeError(err, 'login'));
+    } finally {
+      setPending(false);
+    }
+  };
+
   return (
     <Modal title={mode === 'login' ? 'Sign in' : 'Create account'} onClose={onClose}>
+      {DEMO_MODE && (
+        <div className="demo-login">
+          <span className="field__label">Try a seeded demo account</span>
+          <div className="demo-login__buttons">
+            {(['Candidate', 'Employer'] as const).map((demoRole) => (
+              <button
+                key={demoRole}
+                type="button"
+                className="page-button demo-login__button"
+                disabled={pending}
+                onClick={() => void signInAsDemo(demoRole)}
+              >
+                Continue as {demoRole.toLowerCase()}
+              </button>
+            ))}
+          </div>
+          <span className="demo-login__divider">or use any email — accounts stay in this browser</span>
+        </div>
+      )}
+
       <div className="segmented" role="tablist" aria-label="Auth mode">
         <button
           type="button"

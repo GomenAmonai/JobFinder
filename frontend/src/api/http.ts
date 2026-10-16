@@ -1,4 +1,5 @@
-import { API_BASE_URL } from './config';
+import { API_BASE_URL, DEMO_MODE } from './config';
+import { demoFetch } from './demo/server';
 import { clearTokens, getTokens, setTokens } from './token-store';
 
 import type { TokenPair } from '../types/auth';
@@ -22,6 +23,10 @@ interface RequestOptions {
   signal?: AbortSignal;
 }
 
+// In demo mode every call is answered by the in-browser mock API instead of the network.
+const transport = (path: string, init: RequestInit): Promise<Response> =>
+  DEMO_MODE ? demoFetch(path, init) : fetch(`${API_BASE_URL}${path}`, init);
+
 let refreshInFlight: Promise<boolean> | null = null;
 
 // Single-flight refresh: concurrent 401s share one /auth/refresh round-trip.
@@ -33,7 +38,7 @@ async function refreshTokens(): Promise<boolean> {
 
   refreshInFlight = (async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      const response = await transport('/auth/refresh', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken: tokens.refreshToken }),
@@ -65,7 +70,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
       const tokens = getTokens();
       if (tokens) headers.Authorization = `Bearer ${tokens.accessToken}`;
     }
-    return fetch(`${API_BASE_URL}${path}`, {
+    return transport(path, {
       method,
       headers,
       body: body === undefined ? undefined : JSON.stringify(body),

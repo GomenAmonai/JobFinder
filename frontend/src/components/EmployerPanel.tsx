@@ -7,7 +7,6 @@ import { formatPublishedDate } from '../api/format';
 import { EMPLOYER_APPLICATIONS_QUERY_KEY, useEmployerApplications } from '../hooks/use-employer';
 import { useToasts } from '../hooks/use-toasts';
 import { VACANCIES_QUERY_KEY } from '../hooks/use-vacancies';
-import { InboxIcon } from './icons';
 import { StatusControl } from './StatusControl';
 
 import { allowedTransitions } from '../types/applications';
@@ -149,9 +148,6 @@ function EmployerApplications() {
   if (applications.length === 0) {
     return (
       <div className="state-panel">
-        <span className="state-panel__icon">
-          <InboxIcon />
-        </span>
         <p className="state-panel__title">No applications yet</p>
         <p className="state-panel__text">
           Candidates who apply to your posted vacancies appear here. Move them through the stages —

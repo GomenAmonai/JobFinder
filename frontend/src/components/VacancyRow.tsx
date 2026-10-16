@@ -1,10 +1,8 @@
-import { formatPublishedDate, splitSkills } from '../api/format';
+import { formatShortDate, splitSkills } from '../api/format';
 import { LevelBadge, MarketBadge, StackBadge } from './Badges';
-import { CheckIcon, ExternalLinkIcon } from './icons';
+import { ExternalLinkIcon } from './icons';
 
 import type { VacancyDto } from '../types/vacancy';
-
-const MAX_VISIBLE_SKILLS = 6;
 
 interface VacancyRowProps {
   vacancy: VacancyDto;
@@ -13,74 +11,47 @@ interface VacancyRowProps {
 }
 
 export function VacancyRow({ vacancy, applied, onApply }: VacancyRowProps) {
-  const skills = splitSkills(vacancy.skills);
-  const visibleSkills = skills.slice(0, MAX_VISIBLE_SKILLS);
-  const overflowCount = skills.length - visibleSkills.length;
+  const skills = splitSkills(vacancy.skills).join(', ');
+  const subline = [vacancy.company, vacancy.location].filter(Boolean).join(' · ');
 
   return (
     <tr>
-      <td>
-        <span className="cell-source">{vacancy.source}</span>
+      <td className="cell-date" data-label="Date">
+        {formatShortDate(vacancy.publishedAt)}
       </td>
-      <td>
-        <MarketBadge market={vacancy.market} />
-      </td>
-      <td>
-        <LevelBadge level={vacancy.level} />
-      </td>
-      <td>
-        <StackBadge stack={vacancy.stack} />
-      </td>
-      <td>
+      <td className="cell-position">
         {vacancy.url ? (
-          <a
-            className="cell-title"
-            href={vacancy.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            title={vacancy.title}
-          >
+          <a className="cell-title" href={vacancy.url} target="_blank" rel="noopener noreferrer">
             {vacancy.title}
             <ExternalLinkIcon className="cell-title__ext" />
           </a>
         ) : (
-          <span className="cell-title cell-title--plain" title={vacancy.title}>
-            {vacancy.title}
-          </span>
+          <span className="cell-title">{vacancy.title}</span>
         )}
+        {subline && <span className="cell-sub">{subline}</span>}
       </td>
-      <td>
-        <span className="cell-company">{vacancy.company ?? '—'}</span>
+      <td data-label="Level">
+        <LevelBadge level={vacancy.level} />
       </td>
-      <td>
-        <span className="cell-muted">{vacancy.location ?? '—'}</span>
+      <td data-label="Market">
+        <MarketBadge market={vacancy.market} />
       </td>
-      <td>
-        <span className="cell-muted">{vacancy.salaryRaw ?? '—'}</span>
+      <td data-label="Stack">
+        <StackBadge stack={vacancy.stack} />
       </td>
-      <td>
-        {visibleSkills.length > 0 ? (
-          <div className="skills">
-            {visibleSkills.map((skill) => (
-              <span key={skill} className="skill-tag">
-                {skill}
-              </span>
-            ))}
-            {overflowCount > 0 && <span className="skill-tag">+{overflowCount}</span>}
-          </div>
-        ) : (
-          <span className="cell-muted">—</span>
-        )}
+      <td className="cell-salary" data-label="Salary">
+        {vacancy.salaryRaw ?? <span className="cell-muted">not stated</span>}
       </td>
-      <td>
-        <span className="cell-mono">{formatPublishedDate(vacancy.publishedAt)}</span>
+      <td className="cell-skills" data-label="Skills" title={skills || undefined}>
+        {skills ? <span className="cell-skills__text">{skills}</span> : <span className="cell-muted">—</span>}
+      </td>
+      <td className="cell-source" data-label="Source">
+        {vacancy.source}
       </td>
       {onApply && (
-        <td>
+        <td className="cell-action">
           {applied ? (
-            <span className="applied-tag">
-              <CheckIcon size={13} /> Applied
-            </span>
+            <span className="applied-tag">Applied</span>
           ) : (
             <button type="button" className="apply-button" onClick={() => onApply(vacancy)}>
               Apply

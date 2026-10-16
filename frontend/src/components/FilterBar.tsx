@@ -1,26 +1,10 @@
 import { useEffect, useState } from 'react';
 
 import { useDebouncedValue } from '../hooks/use-debounced-value';
+import { MARKET_OPTIONS } from '../types/markets';
 import { SearchIcon } from './icons';
 
-interface FilterOption {
-  label: string;
-  value: string;
-}
-
-// Filter VALUES must exactly equal the tokens the backend stores (it filters on
-// strict string equality and normalizes locations to these market tokens, some
-// Cyrillic). Only the LABELS are localized/prettified for display.
-const MARKET_OPTIONS: FilterOption[] = [
-  { label: 'Worldwide', value: 'Worldwide' },
-  { label: 'Europe', value: 'Европа' },
-  { label: 'US', value: 'США' },
-  { label: 'Canada', value: 'Канада' },
-  { label: 'Russia', value: 'Россия' },
-  { label: 'CIS', value: 'СНГ' },
-  { label: 'Asia', value: 'Азия' },
-  { label: 'Japan', value: 'Япония' },
-];
+import type { FilterOption } from '../types/markets';
 
 const LEVEL_OPTIONS: FilterOption[] = [
   { label: 'Junior', value: 'junior' },

@@ -6,7 +6,7 @@ import { formatPublishedDate } from '../api/format';
 import { APPLICATIONS_QUERY_KEY, useApplications } from '../hooks/use-applications';
 import { useToasts } from '../hooks/use-toasts';
 import { LevelBadge, MarketBadge } from './Badges';
-import { ExternalLinkIcon, InboxIcon, TrashIcon } from './icons';
+import { ExternalLinkIcon, TrashIcon } from './icons';
 import { StatusControl } from './StatusControl';
 
 import { allowedTransitions } from '../types/applications';
@@ -51,12 +51,9 @@ export function ApplicationsBoard() {
   if (applications.length === 0) {
     return (
       <div className="state-panel">
-        <span className="state-panel__icon">
-          <InboxIcon />
-        </span>
         <p className="state-panel__title">No applications yet</p>
         <p className="state-panel__text">
-          Apply to a vacancy from the Browse tab — it lands here so you can track its stage.
+          Apply to a vacancy from the Vacancies tab — it lands here so you can track its stage.
         </p>
       </div>
     );

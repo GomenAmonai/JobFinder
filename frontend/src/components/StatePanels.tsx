@@ -1,6 +1,4 @@
-import { AlertIcon, InboxIcon } from './icons';
-
-export function TableSkeleton({ rows = 8, columns = 10 }: { rows?: number; columns?: number }) {
+export function TableSkeleton({ rows = 8, columns = 9 }: { rows?: number; columns?: number }) {
   return (
     <tbody>
       {Array.from({ length: rows }).map((_, rowIndex) => (
@@ -22,13 +20,9 @@ export function TableSkeleton({ rows = 8, columns = 10 }: { rows?: number; colum
 export function EmptyState() {
   return (
     <div className="state-panel">
-      <span className="state-panel__icon">
-        <InboxIcon />
-      </span>
-      <p className="state-panel__title">No vacancies match your filters</p>
+      <p className="state-panel__title">No vacancies match these filters</p>
       <p className="state-panel__text">
-        Try widening your search or clearing a filter. New matches appear here automatically as they
-        arrive.
+        Widen the search or clear a filter. New matches show up here as soon as they are ingested.
       </p>
     </div>
   );
@@ -36,13 +30,10 @@ export function EmptyState() {
 
 export function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
-    <div className="state-panel">
-      <span className="state-panel__icon state-panel__icon--error">
-        <AlertIcon />
-      </span>
+    <div className="state-panel state-panel--error">
       <p className="state-panel__title">Couldn’t load vacancies</p>
       <p className="state-panel__text">{message}</p>
-      <button type="button" className="button-primary" onClick={onRetry}>
+      <button type="button" className="page-button" onClick={onRetry}>
         Try again
       </button>
     </div>

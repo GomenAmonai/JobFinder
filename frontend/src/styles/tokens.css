@@ -1,68 +1,58 @@
+/*
+ * Design tokens. Paper-and-ink palette: a warm off-white page, near-black text,
+ * hairline rules for structure and one ink-blue accent for things you can act on.
+ * Dark scheme follows the OS setting.
+ */
 :root {
-  color-scheme: dark;
+  color-scheme: light dark;
 
-  /* Surfaces — warm near-black, flat (Vercel / Linear in the dark) */
-  --color-bg: #0a0a0b;
-  --color-bg-elevated: #131315;
-  --color-surface: #19191c;
-  --color-surface-hover: #1f1f22;
-  --color-surface-translucent: #0e0e10; /* now solid; name kept for compat */
+  --color-bg: #f3f0e8;
+  --color-surface: #fbfaf6;
+  --color-surface-hover: #f0ece2;
+  --color-inset: #ebe7dc;
 
-  /* Borders — crisp white-alpha hairlines */
-  --color-border: rgba(255, 255, 255, 0.10);
-  --color-border-strong: rgba(255, 255, 255, 0.16);
+  --color-rule: rgba(22, 21, 15, 0.14);
+  --color-rule-strong: rgba(22, 21, 15, 0.32);
+  --color-ink-rule: #16150f;
 
-  /* Text — warm neutral, never pure white */
-  --color-text: #ebeae7;
-  --color-text-strong: #f7f6f4;
-  --color-text-muted: #8f8e8a;
-  --color-text-faint: #66645f;
+  --color-text: #1d1c17;
+  --color-text-strong: #0d0c08;
+  --color-text-muted: #66625a;
+  --color-text-faint: #8e897d;
 
-  /* Accent — coral (the one brand color) */
-  --color-accent: #ef7a4c;
-  --color-accent-hover: #f59870;
-  --color-accent-soft: rgba(239, 122, 76, 0.14);
-  --color-accent-ring: rgba(245, 152, 112, 0.5);
+  --color-accent: #2340c8;
+  --color-accent-hover: #1a31a0;
+  --color-accent-soft: rgba(35, 64, 200, 0.08);
+  --color-on-accent: #ffffff;
 
-  /* Semantic status */
-  --color-success: #46c08a;
-  --color-success-soft: rgba(70, 192, 138, 0.14);
-  --color-warning: #d89a3c;
-  --color-danger: #e5564a;
-  --color-danger-soft: rgba(229, 86, 74, 0.14);
+  --color-highlight: #f2df57;
+  --color-on-highlight: #1d1c17;
 
-  /* Level badge palette — warm, restrained triad */
-  --level-junior: #5cba8a;
-  --level-junior-soft: rgba(92, 186, 138, 0.14);
-  --level-middle: #c79a4e;
-  --level-middle-soft: rgba(199, 154, 78, 0.15);
-  --level-senior: #f59870;
-  --level-senior-soft: rgba(245, 152, 112, 0.14);
-  --level-unknown: #76746f;
-  --level-unknown-soft: rgba(118, 116, 111, 0.14);
+  --color-success: #23794c;
+  --color-warning: #a8670d;
+  --color-danger: #b3261e;
+  --color-danger-soft: rgba(179, 38, 30, 0.08);
 
-  /* Market badge — calm green */
-  --color-market: #63d3a2;
-  --color-market-soft: rgba(99, 211, 162, 0.12);
+  --level-junior: #23794c;
+  --level-middle: #a8670d;
+  --level-senior: #2340c8;
+  --level-unknown: #8e897d;
 
-  /* Typography — Geist + Geist Mono */
-  --font-display: 'Geist', -apple-system, system-ui, sans-serif;
-  --font-body: 'Geist', -apple-system, system-ui, sans-serif;
-  --font-mono: 'Geist Mono', 'SFMono-Regular', ui-monospace, monospace;
+  --font-display: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --font-body: 'IBM Plex Sans', -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Consolas, monospace;
 
   --text-xs: 0.75rem;
   --text-sm: 0.8125rem;
   --text-base: 0.9375rem;
   --text-lg: 1.125rem;
   --text-xl: 1.5rem;
-  --text-2xl: 2rem;
-  --text-3xl: 2.75rem;
+  --text-2xl: 2.25rem;
 
   --weight-regular: 400;
   --weight-medium: 500;
-  --weight-bold: 700;
+  --weight-bold: 600;
 
-  /* Spacing scale (4px base) */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -72,23 +62,51 @@
   --space-7: 3rem;
   --space-8: 4rem;
 
-  /* Radius — tight & editorial */
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-  --radius-pill: 999px;
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 3px;
+  --radius-pill: 2px;
 
-  /* Shadows — minimal, neutral black (cards lean on borders) */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 16px -8px rgba(0, 0, 0, 0.6);
-  --shadow-lg: 0 16px 40px -20px rgba(0, 0, 0, 0.7);
+  --transition-fast: 90ms ease-out;
+  --transition-base: 140ms ease-out;
 
-  /* Motion — quick, precise */
-  --transition-fast: 110ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-base: 180ms cubic-bezier(0.4, 0, 0.2, 1);
-
-  /* Layout */
-  --container-max: 1280px;
+  --container-max: 1240px;
   --z-toast: 100;
   --z-header: 50;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #15140f;
+    --color-surface: #1c1b16;
+    --color-surface-hover: #24231d;
+    --color-inset: #11100c;
+
+    --color-rule: rgba(236, 232, 220, 0.13);
+    --color-rule-strong: rgba(236, 232, 220, 0.28);
+    --color-ink-rule: #ece8dc;
+
+    --color-text: #e6e2d6;
+    --color-text-strong: #f6f3ea;
+    --color-text-muted: #a39e91;
+    --color-text-faint: #78736a;
+
+    --color-accent: #8ea2ff;
+    --color-accent-hover: #b1bfff;
+    --color-accent-soft: rgba(142, 162, 255, 0.12);
+    --color-on-accent: #11100c;
+
+    --color-highlight: #d9c443;
+    --color-on-highlight: #15140f;
+
+    --color-success: #6cc495;
+    --color-warning: #e0a54a;
+    --color-danger: #f0776e;
+    --color-danger-soft: rgba(240, 119, 110, 0.12);
+
+    --level-junior: #6cc495;
+    --level-middle: #e0a54a;
+    --level-senior: #8ea2ff;
+    --level-unknown: #78736a;
+  }
 }
